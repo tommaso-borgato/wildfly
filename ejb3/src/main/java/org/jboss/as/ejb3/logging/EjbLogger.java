@@ -107,6 +107,10 @@ import org.jboss.modules.ModuleIdentifier;
 import org.jboss.msc.service.ServiceController;
 import org.jboss.msc.service.ServiceName;
 
+import static org.jboss.logging.Logger.Level.ERROR;
+import static org.jboss.logging.Logger.Level.INFO;
+import static org.jboss.logging.Logger.Level.WARN;
+
 /**
  * @author <a href="mailto:Flemming.Harms@gmail.com">Flemming Harms</a>
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>

@@ -66,6 +66,7 @@
             <xs:element name="log-system-exceptions" type="log-system-exceptionsType" minOccurs="0" maxOccurs="1"/>
             <xs:element name="allow-ejb-name-regex" type="allow-ejb-name-regexType" minOccurs="0" maxOccurs="1" />
             <xs:element name="server-interceptors" type="serverInterceptorsType" minOccurs="0" maxOccurs="1" />
+            <xs:element name="access-log" type="accessLogType" minOccurs="0" maxOccurs="1" />
         </xs:all>
     </xs:complexType>
 
@@ -576,4 +577,180 @@
         </xs:annotation>
         <xs:list itemType="xs:string"/>
     </xs:simpleType>
+
+    <xs:complexType name="accessLogType">
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:element name="console-handler" type="consoleHandlerType"/>
+            <xs:element name="file-handler" type="fileHandlerType"/>
+            <xs:element name="periodic-rotating-file-handler" type="periodicFileHandlerType"/>
+            <xs:element name="server-log-handler" type="serverLogHandlerType"/>
+            <xs:element name="formatter" type="formatterType"/>
+        </xs:choice>
+    </xs:complexType>
+
+    <xs:complexType name="consoleHandlerType">
+        <xs:annotation>
+            <xs:documentation>
+                Defines an access log which writes to the console.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:all>
+            <xs:element name="formatter" type="namedFormatterType" minOccurs="0"/>
+        </xs:all>
+        <xs:attribute name="name" type="xs:string" use="required"/>
+        <xs:attribute name="encoding" type="xs:string" use="optional"/>
+        <xs:attribute name="autoflush" type="xs:boolean" use="optional" default="true"/>
+    </xs:complexType>
+
+    <xs:complexType name="serverLogHandlerType">
+        <xs:annotation>
+            <xs:documentation>
+                Defines an access log which writes to the server log.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:all>
+            <xs:element name="formatter" type="namedFormatterType" minOccurs="0"/>
+        </xs:all>
+        <xs:attribute name="name" type="xs:string" use="required"/>
+    </xs:complexType>
+
+    <xs:complexType name="fileHandlerType">
+        <xs:annotation>
+            <xs:documentation>
+                Defines an access log which writes to a file.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:all>
+            <xs:element name="formatter" type="namedFormatterType" minOccurs="0"/>
+        </xs:all>
+        <xs:attribute name="name" type="xs:string" use="required"/>
+        <xs:attribute name="encoding" type="xs:string" use="optional"/>
+        <xs:attribute name="autoflush" type="xs:boolean" use="optional" default="true"/>
+        <xs:attribute name="append" type="xs:boolean" use="optional" default="true"/>
+        <xs:attribute name="path" type="xs:string" use="required" />
+        <xs:attribute name="relative-to" type="xs:string" use="optional" default="jboss.server.log.dir"/>
+
+    </xs:complexType>
+
+    <xs:complexType name="periodicFileHandlerType">
+        <xs:annotation>
+            <xs:documentation>
+                Defines an access log which writes to a file, rotating the log after a time period derived from the given
+                suffix string, which should be in a format understood by java.text.SimpleDateFormat.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:all>
+            <xs:element name="formatter" type="namedFormatterType" minOccurs="0"/>
+        </xs:all>
+        <xs:attribute name="name" type="xs:string" use="required"/>
+        <xs:attribute name="encoding" type="xs:string" use="optional"/>
+        <xs:attribute name="autoflush" type="xs:boolean" use="optional" default="true"/>
+        <xs:attribute name="append" type="xs:boolean" use="optional" default="true"/>
+        <xs:attribute name="path" type="xs:string" use="required" />
+        <xs:attribute name="relative-to" type="xs:string" use="optional" default="jboss.server.log.dir"/>
+        <xs:attribute name="suffix" type="xs:string" use="required" />
+    </xs:complexType>
+
+    <xs:complexType name="valueType">
+        <xs:attribute name="value" use="required" type="xs:string"/>
+    </xs:complexType>
+
+    <xs:complexType name="propertiesType">
+        <xs:annotation>
+            <xs:documentation>
+                A collection of free-form properties.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:element name="property">
+                <xs:complexType>
+                    <xs:attribute name="name" type="xs:string" use="required"/>
+                    <xs:attribute name="value" type="xs:string" use="optional"/>
+                </xs:complexType>
+            </xs:element>
+        </xs:choice>
+    </xs:complexType>
+
+    <xs:complexType name="formatterType">
+        <xs:annotation>
+            <xs:documentation>
+                A formatter that can be assigned to an access log.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:choice minOccurs="1" maxOccurs="1">
+            <xs:element name="pattern-formatter" type="patternFormatterType" maxOccurs="1"/>
+            <xs:element name="json-formatter" type="jsonFormatterType">
+            </xs:element>
+        </xs:choice>
+        <xs:attribute name="name" type="xs:string" use="required"/>
+    </xs:complexType>
+
+    <xs:complexType name="patternFormatterType">
+        <xs:annotation>
+            <xs:documentation>
+                Defines a simple pattern formatter.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:attribute name="name" type="xs:string" use="required"/>
+        <xs:attribute name="pattern" type="xs:string" use="required"/>
+    </xs:complexType>
+
+    <xs:complexType name="namedFormatterType">
+        <xs:annotation>
+            <xs:documentation>
+                The name of a defined formatter that will be used to format the log message.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:attribute name="name" type="xs:string" use="required"/>
+    </xs:complexType>
+
+    <xs:complexType name="jsonFormatterType">
+        <xs:annotation>
+            <xs:documentation>
+                Defines a JSON pattern formatter.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:all>
+            <xs:element name="record-delimiter" type="valueType" minOccurs="0">
+                <xs:annotation>
+                    <xs:documentation>
+                        The value to be used to indicate the end of a record. If set to null no delimiter will be used
+                        at the end of the record. The default value is a line feed.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="meta-data" type="propertiesType" minOccurs="0">
+                <xs:annotation>
+                    <xs:documentation>
+                        Sets the meta data to use in the structured format. Properties will be added to each log message.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+        </xs:all>
+        <xs:attribute name="name" type="xs:string" use="required"/>
+        <xs:attribute name="pattern" type="xs:string" use="required"/>
+        <xs:attribute name="date-format" type="xs:string">
+            <xs:annotation>
+                <xs:documentation>
+                    The date/time format pattern. The pattern must be a valid
+                    java.time.format.DateTimeFormatter.ofPattern() pattern.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="pretty-print" type="xs:boolean" default="false">
+            <xs:annotation>
+                <xs:documentation>
+                    Indicates whether or not pretty printing should be used when formatting.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="zone-id" type="xs:string">
+            <xs:annotation>
+                <xs:documentation>
+                    The zone ID for formatting the date and time. The system default is used if left undefined.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+    </xs:complexType>
+
 </xs:schema>

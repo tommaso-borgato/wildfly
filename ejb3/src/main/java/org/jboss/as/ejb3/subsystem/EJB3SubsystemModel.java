@@ -167,5 +167,27 @@ public interface EJB3SubsystemModel {
     String CLASS = "class";
     String BINDING = "binding";
 
+    // EJB Access Log
+    String ACCESS_LOG = "access-log";
+    String NAME = "name";
+    String CONSOLE_HANDLER = "console-handler";
+    String FILE_HANDLER = "file-handler";
+    String PERIODIC_ROTATING_FILE_HANDLER = "periodic-rotating-file-handler";
+    String SERVER_LOG_HANDLER = "server-log-handler";
+    String FORMATTER = "formatter";
+    String ENCODING = "encoding";
+    String FILE = "file";
+    String APPEND = "append";
+    String SUFFIX = "suffix";
+    String PATTERN_FORMATTER = "pattern-formatter";
+    String JSON_FORMATTER = "json-formatter";
+    String RECORD_DELIMITER = "record-delimiter";
+    String META_DATA = "meta-data";
+    String PATTERN = "pattern";
+    String AUTOFLUSH = "autoflush";
+    String DATE_FORMAT = "date-format";
+    String PRETTY_PRINT = "pretty-print";
+    String ZONE_ID = "zone-id";
 
+    PathElement ACCESS_LOG_PATH = PathElement.pathElement(SERVICE, ACCESS_LOG);
 }

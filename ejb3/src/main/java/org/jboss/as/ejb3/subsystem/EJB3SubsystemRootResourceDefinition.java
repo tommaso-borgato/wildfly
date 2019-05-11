@@ -55,6 +55,7 @@ import org.jboss.as.controller.services.path.PathManager;
 import org.jboss.as.ejb3.deployment.processors.EJBDefaultSecurityDomainProcessor;
 import org.jboss.as.ejb3.deployment.processors.merging.MissingMethodPermissionsDenyAccessMergingProcessor;
 import org.jboss.as.ejb3.logging.EjbLogger;
+import org.jboss.as.ejb3.subsystem.accesslog.AccessLogResourceDefinition;
 import org.jboss.as.threads.ThreadFactoryResolver;
 import org.jboss.as.threads.ThreadsServices;
 import org.jboss.as.threads.UnboundedQueueThreadPoolResourceDefinition;
@@ -363,6 +364,8 @@ public class EJB3SubsystemRootResourceDefinition extends SimpleResourceDefinitio
         subsystemRegistration.registerSubModel(APPLICATION_SECURITY_DOMAIN);
 
         subsystemRegistration.registerSubModel(IDENTITY);
+
+        subsystemRegistration.registerSubModel(AccessLogResourceDefinition.INSTANCE);
     }
 
     private static class EJB3ThreadFactoryResolver extends ThreadFactoryResolver.SimpleResolver {

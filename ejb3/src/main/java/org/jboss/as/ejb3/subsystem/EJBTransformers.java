@@ -202,8 +202,12 @@ public class EJBTransformers implements ExtensionTransformerRegistration {
         final ResourceTransformationDescriptionBuilder builder = TransformationDescriptionBuilder.Factory.createSubsystemInstance();
 
         builder.getAttributeBuilder().addRejectCheck(RejectAttributeChecker.DEFINED, EJB3SubsystemRootResourceDefinition.SERVER_INTERCEPTORS);
-
+        registerAccessLoggingTransformers(builder);
         TransformationDescription.Tools.register(builder.build(), subsystemRegistration, VERSION_5_0_0);
+    }
+
+    private static void registerAccessLoggingTransformers(final ResourceTransformationDescriptionBuilder parent) {
+        parent.rejectChildResource(EJB3SubsystemModel.ACCESS_LOG_PATH);
     }
 
     private static void registerRemoteTransformers(ResourceTransformationDescriptionBuilder parent) {

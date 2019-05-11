@@ -115,7 +115,17 @@ public enum EJB3SubsystemXMLAttribute {
     // server interceptors
     MODULE("module"),
     CLASS("class"),
-    BINDING("binding")
+    BINDING("binding"),
+
+    // EJB Access Logging
+    PATTERN("pattern"),
+    AUTOFLUSH("autoflush"),
+    ENCODING ("encoding"),
+    APPEND("append"),
+    SUFFIX("suffix"),
+    DATE_FORMAT("date-format"),
+    PRETTY_PRINT("pretty-print"),
+    ZONE_ID("zone-id")
     ;
 
     private final String name;

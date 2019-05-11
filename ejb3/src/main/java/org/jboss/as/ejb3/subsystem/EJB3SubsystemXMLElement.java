@@ -109,7 +109,21 @@ public enum EJB3SubsystemXMLElement {
 
     //server interceptors
     SERVER_INTERCEPTORS("server-interceptors"),
-    INTERCEPTOR("interceptor")
+    INTERCEPTOR("interceptor"),
+
+    // EJB Access Log
+    ACCESS_LOG("access-log"),
+    CONSOLE_HANDLER("console-handler"),
+    FILE_HANDLER("file-handler"),
+    PERIODIC_ROTATING_FILE_HANDLER("periodic-rotating-file-handler"),
+    SERVER_LOG_HANDLER("server-log-handler"),
+    FORMATTER("formatter"),
+
+    FILE("file"),
+    JSON_FORMATTER("json-formatter"),
+    PATTERN_FORMATTER("pattern-formatter"),
+    RECORD_DELIMITER("record-delimiter"),
+    META_DATA("meta-data")
     ;
 
     private final String name;

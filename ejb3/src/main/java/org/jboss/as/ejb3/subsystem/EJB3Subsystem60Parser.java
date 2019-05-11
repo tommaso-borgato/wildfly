@@ -22,21 +22,41 @@
 
 package org.jboss.as.ejb3.subsystem;
 
+import java.util.List;
+import javax.xml.stream.XMLStreamConstants;
+import javax.xml.stream.XMLStreamException;
+
+import org.jboss.as.controller.PathAddress;
+import org.jboss.as.controller.PathElement;
+import org.jboss.as.controller.operations.common.Util;
+import org.jboss.as.controller.parsing.ParseUtils;
+import org.jboss.as.controller.services.path.PathResourceDefinition;
+import org.jboss.as.ejb3.subsystem.accesslog.ConsoleHandlerResourceDefinition;
+import org.jboss.as.ejb3.subsystem.accesslog.FileHandlerResourceDefinition;
+import org.jboss.as.ejb3.subsystem.accesslog.JsonFormatterResourceDefinition;
+import org.jboss.as.ejb3.subsystem.accesslog.PatternFormatterResourceDefinition;
+import org.jboss.as.ejb3.subsystem.accesslog.PeriodicHandlerResourceDefinition;
+import org.jboss.as.ejb3.subsystem.accesslog.ServerLogHandlerResourceDefinition;
 import org.jboss.dmr.ModelNode;
 import org.jboss.staxmapper.XMLExtendedStreamReader;
 
-import javax.xml.stream.XMLStreamConstants;
-import javax.xml.stream.XMLStreamException;
-import java.util.List;
-
+import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.OP_ADDR;
+import static org.jboss.as.controller.parsing.ParseUtils.missingRequired;
 import static org.jboss.as.controller.parsing.ParseUtils.requireNoAttributes;
 import static org.jboss.as.controller.parsing.ParseUtils.requireNoContent;
 import static org.jboss.as.controller.parsing.ParseUtils.requireNoNamespaceAttribute;
 import static org.jboss.as.controller.parsing.ParseUtils.unexpectedAttribute;
 import static org.jboss.as.controller.parsing.ParseUtils.unexpectedElement;
 import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.CLASS;
+import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.CONSOLE_HANDLER;
+import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.FILE_HANDLER;
+import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.JSON_FORMATTER;
 import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.MODULE;
+import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.PATTERN_FORMATTER;
+import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.PERIODIC_ROTATING_FILE_HANDLER;
 import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.SERVER_INTERCEPTORS;
+import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.SERVER_LOG_HANDLER;
+import static org.jboss.as.ejb3.subsystem.EJB3SubsystemXMLAttribute.VALUE;
 
 /**
  * Parser for ejb3:6.0 namespace.
@@ -58,6 +78,10 @@ public class EJB3Subsystem60Parser extends EJB3Subsystem50Parser {
         switch (element) {
             case SERVER_INTERCEPTORS: {
                 parseServerInterceptors(reader, ejb3SubsystemAddOperation);
+                break;
+            }
+            case ACCESS_LOG: {
+                parseAccessLog(reader, operations, ejb3SubsystemAddOperation);
                 break;
             }
             default: {
@@ -110,4 +134,347 @@ public class EJB3Subsystem60Parser extends EJB3Subsystem50Parser {
 
         interceptors.add(interceptor);
     }
+
+    private void parseAccessLog(final XMLExtendedStreamReader reader,
+                                final List<ModelNode> operations,
+                                final ModelNode ejb3SubsystemAddOperation) throws XMLStreamException {
+        requireNoAttributes(reader);
+
+        final PathAddress accessLogAddress = PathAddress.pathAddress(EJB3SubsystemModel.ACCESS_LOG_PATH);
+        ModelNode accessLogAddOperation = Util.createAddOperation(accessLogAddress);
+
+        while (reader.hasNext() && reader.nextTag() != XMLStreamConstants.END_ELEMENT) {
+            switch (EJB3SubsystemXMLElement.forName(reader.getLocalName())) {
+                case CONSOLE_HANDLER: {
+                    parseConsoleHandler(reader, operations, accessLogAddress);
+                    break;
+                }
+                case FILE_HANDLER: {
+                    parseFileHandler(reader, operations, accessLogAddress);
+                    break;
+                }
+                case PERIODIC_ROTATING_FILE_HANDLER: {
+                    parsePeriodicRotatingFileHandler(reader, operations, accessLogAddress);
+                    break;
+                }
+                case SERVER_LOG_HANDLER: {
+                    parseServerLogHandler(reader, operations, accessLogAddress);
+                    break;
+                }
+                case FORMATTER: {
+                    parseFormatter(reader, operations, accessLogAddress);
+                    break;
+                }
+                default: {
+                    throw unexpectedElement(reader);
+                }
+            }
+        }
+        operations.add(accessLogAddOperation);
+    }
+
+    private void parseFormatter(final XMLExtendedStreamReader reader,
+                                final List<ModelNode> operations,
+                                final PathAddress accessLogAddress) throws XMLStreamException {
+        requireNoAttributes(reader);
+        while (reader.hasNext() && reader.nextTag() != XMLStreamConstants.END_ELEMENT) {
+            switch (EJB3SubsystemXMLElement.forName(reader.getLocalName())) {
+                case PATTERN_FORMATTER:
+                    parsePatternFormatter(reader, operations, accessLogAddress);
+                    break;
+                case JSON_FORMATTER:
+                    parseJsonFormatter(reader, operations, accessLogAddress);
+                    break;
+                default: {
+                    throw unexpectedElement(reader);
+                }
+            }
+        }
+    }
+
+    private void parsePatternFormatter(final XMLExtendedStreamReader reader,
+                                       final List<ModelNode> operations,
+                                       final PathAddress accessLogAddress) throws XMLStreamException {
+        String formatterName = null;
+        ModelNode formatterAddOperation = Util.createAddOperation();
+        final int count = reader.getAttributeCount();
+        for (int i = 0; i < count; i++) {
+            requireNoNamespaceAttribute(reader, i);
+            final String attributeValue = reader.getAttributeValue(i);
+            final EJB3SubsystemXMLAttribute attribute = EJB3SubsystemXMLAttribute.forName(reader.getAttributeLocalName(i));
+            switch (attribute) {
+                case NAME:
+                    formatterName = attributeValue;
+                    break;
+                case PATTERN:
+                    PatternFormatterResourceDefinition.PATTERN.parseAndSetParameter(attributeValue, formatterAddOperation, reader);
+                    break;
+                default:
+                    throw unexpectedAttribute(reader, i);
+            }
+        }
+        if (formatterName == null) {
+            throw missingRequired(reader, EJB3SubsystemXMLAttribute.NAME.getLocalName());
+        }
+
+        requireNoContent(reader);
+
+        final PathAddress address = accessLogAddress.append(PathElement.pathElement(PATTERN_FORMATTER, formatterName));
+        formatterAddOperation.get(OP_ADDR).set(address.toModelNode());
+        operations.add(formatterAddOperation);
+    }
+
+    private void parseJsonFormatter(final XMLExtendedStreamReader reader,
+                                    final List<ModelNode> operations,
+                                    final PathAddress accessLogAddress) throws XMLStreamException {
+        String formatterName = null;
+        ModelNode formatterAddOperation = Util.createAddOperation();
+        final int count = reader.getAttributeCount();
+        for (int i = 0; i < count; i++) {
+            requireNoNamespaceAttribute(reader, i);
+            final String attributeValue = reader.getAttributeValue(i);
+            final EJB3SubsystemXMLAttribute attribute = EJB3SubsystemXMLAttribute.forName(reader.getAttributeLocalName(i));
+            switch (attribute) {
+                case NAME:
+                    formatterName = attributeValue;
+                    break;
+                case PATTERN:
+                    PatternFormatterResourceDefinition.PATTERN.parseAndSetParameter(attributeValue, formatterAddOperation, reader);
+                    break;
+                case DATE_FORMAT:
+                    JsonFormatterResourceDefinition.DATE_FORMAT.parseAndSetParameter(attributeValue, formatterAddOperation, reader);
+                    break;
+                case PRETTY_PRINT:
+                    JsonFormatterResourceDefinition.PRETTY_PRINT.parseAndSetParameter(attributeValue, formatterAddOperation, reader);
+                    break;
+                case ZONE_ID:
+                    JsonFormatterResourceDefinition.ZONE_ID.parseAndSetParameter(attributeValue, formatterAddOperation, reader);
+                    break;
+                default:
+                    throw unexpectedAttribute(reader, i);
+            }
+        }
+
+        if (formatterName == null) {
+            throw missingRequired(reader, EJB3SubsystemXMLAttribute.NAME.getLocalName());
+        }
+
+        while (reader.hasNext() && reader.nextTag() != XMLStreamConstants.END_ELEMENT) {
+            switch (EJB3SubsystemXMLElement.forName(reader.getLocalName())) {
+                case RECORD_DELIMITER:
+                    final String value = ParseUtils.readStringAttributeElement(reader, VALUE.getLocalName());
+                    JsonFormatterResourceDefinition.RECORD_DELIMITER.parseAndSetParameter(value, formatterAddOperation, reader);
+                    break;
+                case META_DATA:
+                    parsePropertyElement(reader, formatterAddOperation, JsonFormatterResourceDefinition.META_DATA.getName());
+                    break;
+                default: {
+                    throw unexpectedElement(reader);
+                }
+            }
+        }
+
+        final PathAddress address = accessLogAddress.append(PathElement.pathElement(JSON_FORMATTER, formatterName));
+        formatterAddOperation.get(OP_ADDR).set(address.toModelNode());
+        operations.add(formatterAddOperation);
+    }
+
+
+    private void parseServerLogHandler(final XMLExtendedStreamReader reader,
+                                       final List<ModelNode> operations,
+                                       final PathAddress accessLogAddress) throws XMLStreamException {
+        String handlerName = null;
+        ModelNode handlerAddOperation = Util.createAddOperation();
+        final int count = reader.getAttributeCount();
+        for (int i = 0; i < count; i++) {
+            requireNoNamespaceAttribute(reader, i);
+            final String attributeValue = reader.getAttributeValue(i);
+            final EJB3SubsystemXMLAttribute attribute = EJB3SubsystemXMLAttribute.forName(reader.getAttributeLocalName(i));
+            switch (attribute) {
+                case NAME:
+                    handlerName = attributeValue;
+                    break;
+                default:
+                    throw unexpectedAttribute(reader, i);
+            }
+        }
+        if (handlerName == null) {
+            throw missingRequired(reader, EJB3SubsystemXMLAttribute.NAME.getLocalName());
+        }
+
+        readAndParseHandlerFormatter(reader, handlerAddOperation);
+
+        final PathAddress address = accessLogAddress.append(PathElement.pathElement(SERVER_LOG_HANDLER, handlerName));
+        handlerAddOperation.get(OP_ADDR).set(address.toModelNode());
+        operations.add(handlerAddOperation);
+    }
+
+    private void parsePeriodicRotatingFileHandler(final XMLExtendedStreamReader reader,
+                                                  final List<ModelNode> operations,
+                                                  final PathAddress accessLogAddress) throws XMLStreamException {
+        parseFileHandlerOrPeriodicRotatingFileHandler(reader, operations, accessLogAddress, PERIODIC_ROTATING_FILE_HANDLER);
+    }
+
+    private void parseFileHandler(final XMLExtendedStreamReader reader,
+                                  final List<ModelNode> operations,
+                                  final PathAddress accessLogAddress) throws XMLStreamException {
+        parseFileHandlerOrPeriodicRotatingFileHandler(reader, operations, accessLogAddress, FILE_HANDLER);
+    }
+
+    private void parseFileHandlerOrPeriodicRotatingFileHandler(final XMLExtendedStreamReader reader,
+                                                               final List<ModelNode> operations,
+                                                               final PathAddress accessLogAddress,
+                                                               final String handlerType) throws XMLStreamException {
+        String handlerName = null;
+        ModelNode handlerAddOperation = Util.createAddOperation();
+        final int count = reader.getAttributeCount();
+        for (int i = 0; i < count; i++) {
+            requireNoNamespaceAttribute(reader, i);
+            final String attributeValue = reader.getAttributeValue(i);
+            final EJB3SubsystemXMLAttribute attribute = EJB3SubsystemXMLAttribute.forName(reader.getAttributeLocalName(i));
+            switch (attribute) {
+                case NAME:
+                    handlerName = attributeValue;
+                    break;
+                case ENCODING:
+                    ConsoleHandlerResourceDefinition.ENCODING.parseAndSetParameter(attributeValue, handlerAddOperation, reader);
+                    break;
+                case AUTOFLUSH:
+                    ConsoleHandlerResourceDefinition.AUTOFLUSH.parseAndSetParameter(attributeValue, handlerAddOperation, reader);
+                    break;
+                case APPEND:
+                    FileHandlerResourceDefinition.APPEND.parseAndSetParameter(attributeValue, handlerAddOperation, reader);
+                    break;
+                case PATH:
+                    PathResourceDefinition.PATH.parseAndSetParameter(attributeValue, handlerAddOperation, reader);
+                    break;
+                case RELATIVE_TO:
+                    PathResourceDefinition.RELATIVE_TO.parseAndSetParameter(attributeValue, handlerAddOperation, reader);
+                    break;
+                case SUFFIX:
+                    if (handlerType.equals(PERIODIC_ROTATING_FILE_HANDLER)) {
+                        PeriodicHandlerResourceDefinition.SUFFIX.parseAndSetParameter(attributeValue, handlerAddOperation, reader);
+                    } else {
+                        throw unexpectedAttribute(reader, i);
+                    }
+                    break;
+                default:
+                    throw unexpectedAttribute(reader, i);
+            }
+        }
+        if (handlerName == null) {
+            throw missingRequired(reader, EJB3SubsystemXMLAttribute.NAME.getLocalName());
+        }
+
+        readAndParseHandlerFormatter(reader, handlerAddOperation);
+
+        final PathAddress address = accessLogAddress.append(PathElement.pathElement(handlerType, handlerName));
+        handlerAddOperation.get(OP_ADDR).set(address.toModelNode());
+        operations.add(handlerAddOperation);
+    }
+
+    private void parseConsoleHandler(final XMLExtendedStreamReader reader,
+                                     final List<ModelNode> operations,
+                                     final PathAddress accessLogAddress) throws XMLStreamException {
+        String handlerName = null;
+        ModelNode handlerAddOperation = Util.createAddOperation();
+        final int count = reader.getAttributeCount();
+        for (int i = 0; i < count; i++) {
+            requireNoNamespaceAttribute(reader, i);
+            final String attributeValue = reader.getAttributeValue(i);
+            final EJB3SubsystemXMLAttribute attribute = EJB3SubsystemXMLAttribute.forName(reader.getAttributeLocalName(i));
+            switch (attribute) {
+                case NAME:
+                    handlerName = attributeValue;
+                    break;
+                case ENCODING:
+                    ConsoleHandlerResourceDefinition.ENCODING.parseAndSetParameter(attributeValue, handlerAddOperation, reader);
+                    break;
+                case AUTOFLUSH:
+                    ConsoleHandlerResourceDefinition.AUTOFLUSH.parseAndSetParameter(attributeValue, handlerAddOperation, reader);
+                    break;
+                default:
+                    throw unexpectedAttribute(reader, i);
+            }
+        }
+        if (handlerName == null) {
+            throw missingRequired(reader, EJB3SubsystemXMLAttribute.NAME.getLocalName());
+        }
+
+        readAndParseHandlerFormatter(reader, handlerAddOperation);
+
+        final PathAddress address = accessLogAddress.append(PathElement.pathElement(CONSOLE_HANDLER, handlerName));
+        handlerAddOperation.get(OP_ADDR).set(address.toModelNode());
+        operations.add(handlerAddOperation);
+    }
+
+    private void readAndParseHandlerFormatter(final XMLExtendedStreamReader reader,
+                                              final ModelNode handlerAddOperation) throws XMLStreamException {
+        while (reader.hasNext() && reader.nextTag() != XMLStreamConstants.END_ELEMENT) {
+            switch (EJB3SubsystemXMLElement.forName(reader.getLocalName())) {
+                case FORMATTER:
+                    parseHandlerFormatter(reader, handlerAddOperation);
+                    break;
+                default: {
+                    throw unexpectedElement(reader);
+                }
+            }
+        }
+    }
+
+    private void parseHandlerFormatter(final XMLExtendedStreamReader reader,
+                                       final ModelNode operation) throws XMLStreamException {
+        String formatterName = null;
+        final int count = reader.getAttributeCount();
+        for (int i = 0; i < count; i++) {
+            requireNoNamespaceAttribute(reader, i);
+            final String attributeValue = reader.getAttributeValue(i);
+            final EJB3SubsystemXMLAttribute attribute = EJB3SubsystemXMLAttribute.forName(reader.getAttributeLocalName(i));
+            switch (attribute) {
+                case NAME:
+                    formatterName = attributeValue;
+                    ServerLogHandlerResourceDefinition.FORMATTER.parseAndSetParameter(formatterName, operation, reader);
+                    break;
+                default:
+                    throw unexpectedAttribute(reader, i);
+            }
+        }
+        if (formatterName == null) {
+            throw missingRequired(reader, EJB3SubsystemXMLAttribute.NAME.getLocalName());
+        }
+        requireNoContent(reader);
+    }
+
+    private void parsePropertyElement(final XMLExtendedStreamReader reader,
+                                      final ModelNode operation,
+                                      final String wrapperName) throws XMLStreamException {
+        while (reader.hasNext() && reader.nextTag() != XMLStreamConstants.END_ELEMENT) {
+            final int cnt = reader.getAttributeCount();
+            String name = null;
+            String value = null;
+            for (int i = 0; i < cnt; i++) {
+                requireNoNamespaceAttribute(reader, i);
+                final String attributeValue = reader.getAttributeValue(i);
+                final EJB3SubsystemXMLAttribute attribute = EJB3SubsystemXMLAttribute.forName(reader.getAttributeLocalName(i));
+                switch (attribute) {
+                    case NAME: {
+                        name = attributeValue;
+                        break;
+                    }
+                    case VALUE: {
+                        value = attributeValue;
+                        break;
+                    }
+                    default:
+                        throw unexpectedAttribute(reader, i);
+                }
+            }
+            if (name == null) {
+                throw missingRequired(reader, EJB3SubsystemXMLAttribute.NAME.getLocalName());
+            }
+            operation.get(wrapperName).add(name, (value == null ? new ModelNode() : new ModelNode(value)));
+            requireNoContent(reader);
+        }
+    }
+
 }
