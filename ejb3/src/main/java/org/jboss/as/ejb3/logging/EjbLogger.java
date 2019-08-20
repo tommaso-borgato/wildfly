@@ -38,7 +38,6 @@ import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
 import javax.ejb.ConcurrentAccessTimeoutException;
 import javax.ejb.EJBAccessException;
 import javax.ejb.EJBException;
@@ -106,10 +105,6 @@ import org.jboss.metadata.ejb.spec.MethodParametersMetaData;
 import org.jboss.modules.ModuleIdentifier;
 import org.jboss.msc.service.ServiceController;
 import org.jboss.msc.service.ServiceName;
-
-import static org.jboss.logging.Logger.Level.ERROR;
-import static org.jboss.logging.Logger.Level.INFO;
-import static org.jboss.logging.Logger.Level.WARN;
 
 /**
  * @author <a href="mailto:Flemming.Harms@gmail.com">Flemming Harms</a>

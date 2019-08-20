@@ -22,46 +22,28 @@
 
 package org.jboss.as.ejb3.subsystem.accesslog;
 
-import java.util.logging.Handler;
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamWriter;
-
+import org.jboss.as.controller.AbstractAddStepHandler;
+import org.jboss.as.controller.AbstractRemoveStepHandler;
 import org.jboss.as.controller.AttributeDefinition;
-import org.jboss.as.controller.DefaultAttributeMarshaller;
+import org.jboss.as.controller.OperationContext;
+import org.jboss.as.controller.OperationFailedException;
 import org.jboss.as.controller.OperationStepHandler;
 import org.jboss.as.controller.PathElement;
 import org.jboss.as.controller.ReadResourceNameOperationStepHandler;
+import org.jboss.as.controller.ReloadRequiredWriteAttributeHandler;
 import org.jboss.as.controller.SimpleAttributeDefinition;
 import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
 import org.jboss.as.controller.SimpleResourceDefinition;
-import org.jboss.as.controller.operations.global.WriteAttributeHandler;
-import org.jboss.as.controller.operations.validation.EnumValidator;
+import org.jboss.as.controller.descriptions.ResourceDescriptionResolver;
 import org.jboss.as.controller.operations.validation.StringLengthValidator;
 import org.jboss.as.controller.registry.ManagementResourceRegistration;
+import org.jboss.as.ejb3.subsystem.EJB3Extension;
 import org.jboss.as.ejb3.subsystem.EJB3SubsystemModel;
-import org.jboss.as.logging.CommonAttributes;
-import org.jboss.as.logging.ConfigurationProperty;
-import org.jboss.as.logging.KnownModelVersion;
-import org.jboss.as.logging.LoggingExtension;
-import org.jboss.as.logging.LoggingOperations;
-import org.jboss.as.logging.PropertyAttributeDefinition;
-import org.jboss.as.logging.TransformerResourceDefinition;
-import org.jboss.as.logging.capabilities.Capabilities;
-import org.jboss.as.logging.formatters.PatternFormatterResourceDefinition;
-import org.jboss.as.logging.logmanager.PropertySorter;
 import org.jboss.dmr.ModelNode;
 import org.jboss.dmr.ModelType;
-import org.jboss.logmanager.handlers.ConsoleHandler;
-
-import static org.jboss.as.logging.CommonAttributes.ENABLED;
-import static org.jboss.as.logging.CommonAttributes.ENCODING;
-import static org.jboss.as.logging.CommonAttributes.FILTER;
-import static org.jboss.as.logging.CommonAttributes.FILTER_SPEC;
-import static org.jboss.as.logging.CommonAttributes.LEVEL;
-import static org.jboss.as.logging.CommonAttributes.NAME;
 
 public class ServerLogHandlerResourceDefinition extends SimpleResourceDefinition {
-    public static final ServerLogHandlerResourceDefinition INSTANCE = new ServerLogHandlerResourceDefinition();
+    private static final PathElement SERVER_LOG_HANDLER_PATH = PathElement.pathElement(EJB3SubsystemModel.SERVER_LOG_HANDLER);
 
     public static final SimpleAttributeDefinition NAME = new SimpleAttributeDefinitionBuilder(EJB3SubsystemModel.NAME, ModelType.STRING, false)
             .setValidator(new StringLengthValidator(1, false))
@@ -76,49 +58,26 @@ public class ServerLogHandlerResourceDefinition extends SimpleResourceDefinition
 
     private static final AttributeDefinition[] ATTRIBUTES = {FORMATTER};
 
+    public static final ServerLogHandlerResourceDefinition INSTANCE = new ServerLogHandlerResourceDefinition();
+
     public ServerLogHandlerResourceDefinition() {
-        super(CONSOLE_HANDLER_PATH, ConsoleHandler.class, ATTRIBUTES);
+        this(SERVER_LOG_HANDLER_PATH, EJB3Extension.getResourceDescriptionResolver(EJB3SubsystemModel.SERVER_LOG_HANDLER),
+                new ServerLogHandlerAdd(ATTRIBUTES), ServerLogHandlerRemove.INSTANCE);
     }
 
-    protected ServerLogHandlerResourceDefinition(final PathElement path,
-                                                 final Class<? extends Handler> type,
-                                                 final AttributeDefinition[] attributes) {
-        this(createParameters(path, type, PropertySorter.NO_OP, attributes), true, PropertySorter.NO_OP, null, attributes);
+    public ServerLogHandlerResourceDefinition(final PathElement pathElement, final ResourceDescriptionResolver descriptionResolver,
+                                              final OperationStepHandler addHandler, final OperationStepHandler removeHandler) {
+        super(pathElement, descriptionResolver, addHandler, removeHandler);
     }
 
-    protected ServerLogHandlerResourceDefinition(final PathElement path,
-                                                 final boolean registerLegacyOps,
-                                                 final Class<? extends Handler> type,
-                                                 final PropertySorter propertySorter,
-                                                 final AttributeDefinition[] attributes) {
-        this(createParameters(path, type, propertySorter, attributes), registerLegacyOps, propertySorter, null, attributes);
-    }
-
-    protected ServerLogHandlerResourceDefinition(final PathElement path,
-                                                 final Class<? extends Handler> type,
-                                                 final AttributeDefinition[] attributes,
-                                                 final ConfigurationProperty<?>... constructionProperties) {
-        this(createParameters(path, type, PropertySorter.NO_OP, attributes, constructionProperties),
-                true, PropertySorter.NO_OP, null, attributes);
-    }
-
-    protected ServerLogHandlerResourceDefinition(final SimpleResourceDefinition.Parameters parameters,
-                                                 final boolean registerLegacyOps,
-                                                 final PropertySorter propertySorter,
-                                                 final AttributeDefinition[] readOnlyAttributes,
-                                                 final AttributeDefinition[] writableAttributes) {
-        super(parameters);
-        this.registerLegacyOps = registerLegacyOps;
-        this.writableAttributes = writableAttributes;
-        writeHandler = new HandlerOperations.LogHandlerWriteAttributeHandler(propertySorter, this.writableAttributes);
-        this.readOnlyAttributes = readOnlyAttributes;
-        this.propertySorter = propertySorter;
+    AttributeDefinition[] getAttributes() {
+        return ATTRIBUTES;
     }
 
     @Override
     public void registerAttributes(final ManagementResourceRegistration resourceRegistration) {
-        for (AttributeDefinition def : ATTRIBUTES) {
-            resourceRegistration.registerReadWriteAttribute(def, null, WriteAttributeHandler.INSTANCE);
+        for (AttributeDefinition attr : getAttributes()) {
+            resourceRegistration.registerReadWriteAttribute(attr, null, new ReloadRequiredWriteAttributeHandler(attr));
         }
 
         // Be careful with this attribute. It needs to show up in the "add" operation param list so ops from legacy
@@ -127,23 +86,22 @@ public class ServerLogHandlerResourceDefinition extends SimpleResourceDefinition
         resourceRegistration.registerReadOnlyAttribute(NAME, ReadResourceNameOperationStepHandler.INSTANCE);
     }
 
-    /**
-     * Creates the default {@linkplain org.jboss.as.controller.SimpleResourceDefinition.Parameters parameters} for
-     * creating the source.
-     *
-     * @param path                   the resource path
-     * @param type                   the known type of the resource or {@code null} if the type is unknown
-     * @param propertySorter         the property sorter
-     * @param addAttributes          the attributes for the add operation step handler
-     * @param constructionProperties the construction properties required for the handler
-     * @return the default parameters
-     */
-    private static SimpleResourceDefinition.Parameters createParameters(final PathElement path, final Class<? extends Handler> type,
-                                                                        final PropertySorter propertySorter, final AttributeDefinition[] addAttributes,
-                                                                        final ConfigurationProperty<?>... constructionProperties) {
-        return new SimpleResourceDefinition.Parameters(path, LoggingExtension.getResourceDescriptionResolver(path.getKey()))
-                .setAddHandler(new HandlerOperations.HandlerAddOperationStepHandler(propertySorter, type, addAttributes, constructionProperties))
-                .setRemoveHandler(HandlerOperations.REMOVE_HANDLER)
-                .setCapabilities(Capabilities.HANDLER_CAPABILITY);
+    private static class ServerLogHandlerAdd extends AbstractAddStepHandler {
+        private ServerLogHandlerAdd(AttributeDefinition[] attributes) {
+            super(attributes);
+        }
+
+        @Override
+        protected void performRuntime(final OperationContext context, final ModelNode operation, final ModelNode model) throws OperationFailedException {
+
+        }
+    }
+
+    private static class ServerLogHandlerRemove extends AbstractRemoveStepHandler {
+        private static ServerLogHandlerRemove INSTANCE = new ServerLogHandlerRemove();
+
+        private ServerLogHandlerRemove() {
+
+        }
     }
 }

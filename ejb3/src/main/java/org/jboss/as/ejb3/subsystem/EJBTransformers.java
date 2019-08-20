@@ -140,6 +140,7 @@ public class EJBTransformers implements ExtensionTransformerRegistration {
         registerStrictMaxPoolTransformers(builder);
         registerApplicationSecurityDomainDTransformers(builder);
         registerIdentityTransformers(builder);
+        registerAccessLoggingTransformers(builder);
         builder.rejectChildResource(PathElement.pathElement(EJB3SubsystemModel.REMOTING_PROFILE));
         if (version.equals(VERSION_1_2_1)) {
             registerTimerTransformers_1_2_0(builder);
@@ -168,6 +169,7 @@ public class EJBTransformers implements ExtensionTransformerRegistration {
         registerStrictMaxPoolTransformers(builder);
         registerApplicationSecurityDomainDTransformers(builder);
         registerIdentityTransformers(builder);
+        registerAccessLoggingTransformers(builder);
 
         // Rename new statistics-enabled attribute to old enable-statistics
         builder.getAttributeBuilder().addRename(EJB3SubsystemModel.STATISTICS_ENABLED, EJB3SubsystemModel.ENABLE_STATISTICS);
@@ -179,6 +181,8 @@ public class EJBTransformers implements ExtensionTransformerRegistration {
 
         registerApplicationSecurityDomainDTransformers(builder);
         registerIdentityTransformers(builder);
+        registerAccessLoggingTransformers(builder);
+
         builder.addChildResource(RemotingProfileResourceDefinition.INSTANCE).getAttributeBuilder()
                 .addRejectCheck(RejectAttributeChecker.DEFINED, StaticEJBDiscoveryDefinition.INSTANCE)
                 .end();

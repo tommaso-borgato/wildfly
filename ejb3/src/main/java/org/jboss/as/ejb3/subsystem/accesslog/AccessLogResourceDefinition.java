@@ -24,20 +24,15 @@ package org.jboss.as.ejb3.subsystem.accesslog;
 
 import java.util.List;
 
-import org.jboss.as.controller.SimpleAttributeDefinition;
-import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
 import org.jboss.as.controller.SimpleResourceDefinition;
 import org.jboss.as.controller.access.constraint.SensitivityClassification;
 import org.jboss.as.controller.access.management.AccessConstraintDefinition;
 import org.jboss.as.controller.access.management.SensitiveTargetAccessConstraintDefinition;
-import org.jboss.as.controller.capability.DynamicNameMappers;
 import org.jboss.as.controller.capability.RuntimeCapability;
-import org.jboss.as.controller.operations.validation.StringLengthValidator;
 import org.jboss.as.controller.registry.ManagementResourceRegistration;
+import org.jboss.as.controller.services.path.PathManager;
 import org.jboss.as.ejb3.subsystem.EJB3Extension;
 import org.jboss.as.ejb3.subsystem.EJB3SubsystemModel;
-import org.jboss.dmr.ModelNode;
-import org.jboss.dmr.ModelType;
 
 /**
  * Resource definition for ejb3 subsystem access-log.
@@ -46,19 +41,19 @@ public class AccessLogResourceDefinition extends SimpleResourceDefinition {
     public static final String ACCESS_LOG_CAPABILITY = "org.wildfly.ejb3.access-log";
 
     static final RuntimeCapability<Void> ACCESS_LOG_RUNTIME_CAPABILITY = RuntimeCapability.Builder.of(ACCESS_LOG_CAPABILITY, true, AccessLogService.class)
-              .setDynamicNameMapper(DynamicNameMappers.GRAND_PARENT)
               .build();
 
-    public static final AccessLogResourceDefinition INSTANCE = new AccessLogResourceDefinition();
     private final List<AccessConstraintDefinition> accessConstraints;
 
+    private final PathManager pathManager;
 
-    private AccessLogResourceDefinition() {
+    public AccessLogResourceDefinition(final PathManager pathManager) {
         super(new Parameters(EJB3SubsystemModel.ACCESS_LOG_PATH, EJB3Extension.getResourceDescriptionResolver(EJB3SubsystemModel.ACCESS_LOG))
                 .setAddHandler(AccessLogAdd.INSTANCE)
                 .setRemoveHandler(AccessLogRemove.INSTANCE)
                 .setCapabilities(ACCESS_LOG_RUNTIME_CAPABILITY)
         );
+        this.pathManager = pathManager;
         SensitivityClassification sc = new SensitivityClassification(EJB3Extension.SUBSYSTEM_NAME, "ejb-access-log", false, false, false);
         this.accessConstraints = new SensitiveTargetAccessConstraintDefinition(sc).wrapAsList();
     }
@@ -70,10 +65,10 @@ public class AccessLogResourceDefinition extends SimpleResourceDefinition {
 
     @Override
     public void registerChildren(final ManagementResourceRegistration resourceRegistration) {
-        resourceRegistration.registerSubModel(ConsoleHandlerResourceDefinition.INSTANCE);
         resourceRegistration.registerSubModel(ServerLogHandlerResourceDefinition.INSTANCE);
-        resourceRegistration.registerSubModel(FileHandlerResourceDefinition.INSTANCE);
-        resourceRegistration.registerSubModel(PeriodicHandlerResourceDefinition.INSTANCE);
+        resourceRegistration.registerSubModel(ConsoleHandlerResourceDefinition.INSTANCE);
+        resourceRegistration.registerSubModel(new FileHandlerResourceDefinition(pathManager));
+        resourceRegistration.registerSubModel(new PeriodicHandlerResourceDefinition(pathManager));
         resourceRegistration.registerSubModel(PatternFormatterResourceDefinition.INSTANCE);
         resourceRegistration.registerSubModel(JsonFormatterResourceDefinition.INSTANCE);
     }

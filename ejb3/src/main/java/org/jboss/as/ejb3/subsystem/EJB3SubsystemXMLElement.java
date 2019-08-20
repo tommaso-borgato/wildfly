@@ -122,7 +122,6 @@ public enum EJB3SubsystemXMLElement {
     FILE("file"),
     JSON_FORMATTER("json-formatter"),
     PATTERN_FORMATTER("pattern-formatter"),
-    RECORD_DELIMITER("record-delimiter"),
     META_DATA("meta-data")
     ;
 

@@ -365,7 +365,7 @@ public class EJB3SubsystemRootResourceDefinition extends SimpleResourceDefinitio
 
         subsystemRegistration.registerSubModel(IDENTITY);
 
-        subsystemRegistration.registerSubModel(AccessLogResourceDefinition.INSTANCE);
+        subsystemRegistration.registerSubModel(new AccessLogResourceDefinition(pathManager));
     }
 
     private static class EJB3ThreadFactoryResolver extends ThreadFactoryResolver.SimpleResolver {

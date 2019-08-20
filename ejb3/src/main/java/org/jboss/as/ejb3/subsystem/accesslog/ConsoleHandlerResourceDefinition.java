@@ -22,21 +22,24 @@
 
 package org.jboss.as.ejb3.subsystem.accesslog;
 
-import java.util.Arrays;
-
+import org.jboss.as.controller.AbstractAddStepHandler;
+import org.jboss.as.controller.AbstractRemoveStepHandler;
 import org.jboss.as.controller.AttributeDefinition;
+import org.jboss.as.controller.OperationContext;
+import org.jboss.as.controller.OperationFailedException;
+import org.jboss.as.controller.OperationStepHandler;
 import org.jboss.as.controller.PathElement;
 import org.jboss.as.controller.SimpleAttributeDefinition;
 import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
-import org.jboss.as.controller.operations.global.WriteAttributeHandler;
+import org.jboss.as.controller.descriptions.ResourceDescriptionResolver;
 import org.jboss.as.controller.operations.validation.StringLengthValidator;
-import org.jboss.as.controller.registry.ManagementResourceRegistration;
+import org.jboss.as.ejb3.subsystem.EJB3Extension;
 import org.jboss.as.ejb3.subsystem.EJB3SubsystemModel;
 import org.jboss.dmr.ModelNode;
 import org.jboss.dmr.ModelType;
 
 public class ConsoleHandlerResourceDefinition extends ServerLogHandlerResourceDefinition {
-    public static final String NAME = "console-handler";
+    private static final PathElement CONSOLE_HANDLER_PATH = PathElement.pathElement(EJB3SubsystemModel.CONSOLE_HANDLER);
 
     public static final SimpleAttributeDefinition ENCODING = new SimpleAttributeDefinitionBuilder(EJB3SubsystemModel.ENCODING, ModelType.STRING, true)
             .setValidator(new StringLengthValidator(1, true))
@@ -49,23 +52,43 @@ public class ConsoleHandlerResourceDefinition extends ServerLogHandlerResourceDe
             .setRestartAllServices()
             .build();
 
-    private static final PathElement CONSOLE_HANDLER_PATH = PathElement.pathElement(NAME);
+    private static final AttributeDefinition[] ATTRIBUTES = {
+            FORMATTER,  // declared in super class
+            AUTOFLUSH, ENCODING};
 
     public static final ConsoleHandlerResourceDefinition INSTANCE = new ConsoleHandlerResourceDefinition();
 
-    private static final AttributeDefinition[] ATTRIBUTES = {
-            // included in super class: FORMATTER,
-            AUTOFLUSH, ENCODING};
+    public ConsoleHandlerResourceDefinition() {
+        this(CONSOLE_HANDLER_PATH, EJB3Extension.getResourceDescriptionResolver(EJB3SubsystemModel.CONSOLE_HANDLER),
+                new ConsoleHandlerAdd(ATTRIBUTES), ConsoleHandlerRemove.INSTANCE);
+    }
 
-    public ConsoleHandlerResourceDefinition(AttributeDefinition... attributes) {
-        super(attributes);
+    public ConsoleHandlerResourceDefinition(final PathElement pathElement, final ResourceDescriptionResolver descriptionResolver,
+                                              final OperationStepHandler addHandler, final OperationStepHandler removeHandler) {
+        super(pathElement, descriptionResolver, addHandler, removeHandler);
     }
 
     @Override
-    public void registerAttributes(final ManagementResourceRegistration resourceRegistration) {
-        super.registerAttributes(resourceRegistration);
-        for (AttributeDefinition def : ATTRIBUTES) {
-            resourceRegistration.registerReadWriteAttribute(def, null, WriteAttributeHandler.INSTANCE);
+    AttributeDefinition[] getAttributes() {
+        return ATTRIBUTES;
+    }
+
+    private static class ConsoleHandlerAdd extends AbstractAddStepHandler {
+        private ConsoleHandlerAdd(AttributeDefinition[] attributes) {
+            super(attributes);
+        }
+
+        @Override
+        protected void performRuntime(final OperationContext context, final ModelNode operation, final ModelNode model) throws OperationFailedException {
+
+        }
+    }
+
+    private static class ConsoleHandlerRemove extends AbstractRemoveStepHandler {
+        private static ConsoleHandlerRemove INSTANCE = new ConsoleHandlerRemove();
+
+        private ConsoleHandlerRemove() {
+
         }
     }
 }

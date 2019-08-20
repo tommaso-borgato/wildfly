@@ -22,34 +22,27 @@
 
 package org.jboss.as.ejb3.subsystem.accesslog;
 
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamWriter;
-
+import org.jboss.as.controller.AbstractAddStepHandler;
+import org.jboss.as.controller.AbstractRemoveStepHandler;
 import org.jboss.as.controller.AttributeDefinition;
-import org.jboss.as.controller.DefaultAttributeMarshaller;
-import org.jboss.as.controller.ObjectTypeAttributeDefinition;
-import org.jboss.as.controller.OperationContext;
-import org.jboss.as.controller.OperationFailedException;
 import org.jboss.as.controller.OperationStepHandler;
 import org.jboss.as.controller.PathElement;
 import org.jboss.as.controller.ReadResourceNameOperationStepHandler;
+import org.jboss.as.controller.ReloadRequiredWriteAttributeHandler;
 import org.jboss.as.controller.SimpleAttributeDefinition;
 import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
 import org.jboss.as.controller.SimpleResourceDefinition;
-import org.jboss.as.controller.operations.global.WriteAttributeHandler;
+import org.jboss.as.controller.descriptions.ResourceDescriptionResolver;
 import org.jboss.as.controller.operations.validation.StringLengthValidator;
 import org.jboss.as.controller.registry.ManagementResourceRegistration;
-import org.jboss.as.controller.transform.description.ResourceTransformationDescriptionBuilder;
+import org.jboss.as.ejb3.subsystem.EJB3Extension;
 import org.jboss.as.ejb3.subsystem.EJB3SubsystemModel;
 import org.jboss.dmr.ModelNode;
 import org.jboss.dmr.ModelType;
-import org.jboss.logmanager.config.FormatterConfiguration;
-import org.jboss.logmanager.config.LogContextConfiguration;
-import org.jboss.logmanager.formatters.PatternFormatter;
-
-import static org.jboss.as.logging.Logging.createOperationFailure;
 
 public class PatternFormatterResourceDefinition extends SimpleResourceDefinition {
+    private static final PathElement PATH = PathElement.pathElement(EJB3SubsystemModel.PATTERN_FORMATTER);
+
     public static final SimpleAttributeDefinition NAME = new SimpleAttributeDefinitionBuilder(EJB3SubsystemModel.NAME, ModelType.STRING, false)
             .setValidator(new StringLengthValidator(1, false))
             .setRestartAllServices()
@@ -61,78 +54,28 @@ public class PatternFormatterResourceDefinition extends SimpleResourceDefinition
             .setRestartAllServices()
             .build();
 
-    private static final PathElement PATH = PathElement.pathElement(EJB3SubsystemModel.PATTERN_FORMATTER);
-
     private static final AttributeDefinition[] ATTRIBUTES = {PATTERN};
 
-
-    /**
-     * A step handler to add a pattern formatter
-     */
-    private static final OperationStepHandler ADD = new LoggingOperations.LoggingAddOperationStepHandler(ATTRIBUTES) {
-
-        @Override
-        public void performRuntime(final OperationContext context, final ModelNode operation, final ModelNode model, final LogContextConfiguration logContextConfiguration) throws OperationFailedException {
-            final String name = context.getCurrentAddressValue();
-            if (name.endsWith(DEFAULT_FORMATTER_SUFFIX)) {
-                throw LoggingLogger.ROOT_LOGGER.illegalFormatterName();
-            }
-            FormatterConfiguration configuration = logContextConfiguration.getFormatterConfiguration(name);
-            if (configuration == null) {
-                LoggingLogger.ROOT_LOGGER.tracef("Adding formatter '%s' at '%s'", name, context.getCurrentAddress());
-                configuration = logContextConfiguration.addFormatterConfiguration(null, PatternFormatter.class.getName(), name);
-            }
-
-            for (PropertyAttributeDefinition attribute : ATTRIBUTES) {
-                attribute.setPropertyValue(context, model, configuration);
-            }
-        }
-    };
-
-    private static final OperationStepHandler WRITE = new LoggingWriteAttributeHandler(ATTRIBUTES) {
-
-        @Override
-        protected boolean applyUpdate(final OperationContext context, final String attributeName, final String addressName, final ModelNode value, final LogContextConfiguration logContextConfiguration) {
-            final FormatterConfiguration configuration = logContextConfiguration.getFormatterConfiguration(addressName);
-            for (PropertyAttributeDefinition attribute : ATTRIBUTES) {
-                if (attribute.getName().equals(attributeName)) {
-                    configuration.setPropertyValueString(attribute.getPropertyName(), value.asString());
-                    break;
-                }
-            }
-            return false;
-        }
-    };
-
-    /**
-     * A step handler to remove
-     */
-    private static final OperationStepHandler REMOVE = new LoggingOperations.LoggingRemoveOperationStepHandler() {
-
-        @Override
-        public void performRuntime(final OperationContext context, final ModelNode operation, final ModelNode model, final LogContextConfiguration logContextConfiguration) throws OperationFailedException {
-            final String name = context.getCurrentAddressValue();
-            final FormatterConfiguration configuration = logContextConfiguration.getFormatterConfiguration(name);
-            if (configuration == null) {
-                throw createOperationFailure(LoggingLogger.ROOT_LOGGER.formatterNotFound(name));
-            }
-            logContextConfiguration.removeFormatterConfiguration(name);
-        }
-    };
+    AttributeDefinition[] getAttributes() {
+        return ATTRIBUTES;
+    }
 
     public static final PatternFormatterResourceDefinition INSTANCE = new PatternFormatterResourceDefinition();
 
     public PatternFormatterResourceDefinition() {
-        super(new SimpleResourceDefinition.Parameters(PATH, LoggingExtension.getResourceDescriptionResolver(NAME))
-                .setAddHandler(ADD)
-                .setRemoveHandler(REMOVE)
-                .setCapabilities(Capabilities.FORMATTER_CAPABILITY));
+        this(PATH, EJB3Extension.getResourceDescriptionResolver(EJB3SubsystemModel.PATTERN_FORMATTER),
+                new PatternFormatterAdd(ATTRIBUTES), PatternFormatterRemove.INSTANCE);
+    }
+
+    public PatternFormatterResourceDefinition(final PathElement pathElement, final ResourceDescriptionResolver descriptionResolver,
+                                              final OperationStepHandler addHandler, final OperationStepHandler removeHandler) {
+        super(pathElement, descriptionResolver, addHandler, removeHandler);
     }
 
     @Override
     public void registerAttributes(final ManagementResourceRegistration resourceRegistration) {
-        for (AttributeDefinition def : ATTRIBUTES) {
-            resourceRegistration.registerReadWriteAttribute(def, null, WriteAttributeHandler.INSTANCE);
+        for (AttributeDefinition attr : getAttributes()) {
+            resourceRegistration.registerReadWriteAttribute(attr, null, new ReloadRequiredWriteAttributeHandler(attr));
         }
 
         // Be careful with this attribute. It needs to show up in the "add" operation param list so ops from legacy
@@ -141,9 +84,18 @@ public class PatternFormatterResourceDefinition extends SimpleResourceDefinition
         resourceRegistration.registerReadOnlyAttribute(NAME, ReadResourceNameOperationStepHandler.INSTANCE);
     }
 
-
-    @Override
-    public void registerTransformers(final KnownModelVersion modelVersion, final ResourceTransformationDescriptionBuilder resourceBuilder, final ResourceTransformationDescriptionBuilder loggingProfileBuilder) {
-        // do nothing by default
+    private static class PatternFormatterAdd extends AbstractAddStepHandler {
+        private PatternFormatterAdd(AttributeDefinition[] attributes) {
+            super(attributes);
+        }
     }
+
+    private static class PatternFormatterRemove extends AbstractRemoveStepHandler {
+        private static PatternFormatterRemove INSTANCE = new PatternFormatterRemove();
+
+        private PatternFormatterRemove() {
+
+        }
+    }
+
 }

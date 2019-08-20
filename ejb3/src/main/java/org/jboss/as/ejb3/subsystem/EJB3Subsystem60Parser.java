@@ -29,7 +29,6 @@ import javax.xml.stream.XMLStreamException;
 import org.jboss.as.controller.PathAddress;
 import org.jboss.as.controller.PathElement;
 import org.jboss.as.controller.operations.common.Util;
-import org.jboss.as.controller.parsing.ParseUtils;
 import org.jboss.as.controller.services.path.PathResourceDefinition;
 import org.jboss.as.ejb3.subsystem.accesslog.ConsoleHandlerResourceDefinition;
 import org.jboss.as.ejb3.subsystem.accesslog.FileHandlerResourceDefinition;
@@ -56,7 +55,6 @@ import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.PATTERN_FORMATTER;
 import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.PERIODIC_ROTATING_FILE_HANDLER;
 import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.SERVER_INTERCEPTORS;
 import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.SERVER_LOG_HANDLER;
-import static org.jboss.as.ejb3.subsystem.EJB3SubsystemXMLAttribute.VALUE;
 
 /**
  * Parser for ejb3:6.0 namespace.
@@ -241,6 +239,8 @@ public class EJB3Subsystem60Parser extends EJB3Subsystem50Parser {
                 case PATTERN:
                     PatternFormatterResourceDefinition.PATTERN.parseAndSetParameter(attributeValue, formatterAddOperation, reader);
                     break;
+                case RECORD_DELIMITER:
+                    JsonFormatterResourceDefinition.RECORD_DELIMITER.parseAndSetParameter(attributeValue, formatterAddOperation, reader);
                 case DATE_FORMAT:
                     JsonFormatterResourceDefinition.DATE_FORMAT.parseAndSetParameter(attributeValue, formatterAddOperation, reader);
                     break;
@@ -261,10 +261,6 @@ public class EJB3Subsystem60Parser extends EJB3Subsystem50Parser {
 
         while (reader.hasNext() && reader.nextTag() != XMLStreamConstants.END_ELEMENT) {
             switch (EJB3SubsystemXMLElement.forName(reader.getLocalName())) {
-                case RECORD_DELIMITER:
-                    final String value = ParseUtils.readStringAttributeElement(reader, VALUE.getLocalName());
-                    JsonFormatterResourceDefinition.RECORD_DELIMITER.parseAndSetParameter(value, formatterAddOperation, reader);
-                    break;
                 case META_DATA:
                     parsePropertyElement(reader, formatterAddOperation, JsonFormatterResourceDefinition.META_DATA.getName());
                     break;

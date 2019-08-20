@@ -22,58 +22,62 @@
 
 package org.jboss.as.ejb3.subsystem.accesslog;
 
+import org.jboss.as.controller.AbstractAddStepHandler;
+import org.jboss.as.controller.AbstractRemoveStepHandler;
 import org.jboss.as.controller.AttributeDefinition;
+import org.jboss.as.controller.OperationContext;
+import org.jboss.as.controller.OperationFailedException;
 import org.jboss.as.controller.PathElement;
 import org.jboss.as.controller.SimpleAttributeDefinition;
 import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
-import org.jboss.as.controller.operations.global.WriteAttributeHandler;
-import org.jboss.as.controller.registry.ManagementResourceRegistration;
-import org.jboss.as.controller.services.path.PathInfoHandler;
+import org.jboss.as.controller.services.path.PathManager;
 import org.jboss.as.controller.services.path.PathResourceDefinition;
-import org.jboss.as.controller.services.path.ResolvePathHandler;
+import org.jboss.as.ejb3.subsystem.EJB3Extension;
 import org.jboss.as.ejb3.subsystem.EJB3SubsystemModel;
-import org.jboss.as.logging.Logging;
+import org.jboss.dmr.ModelNode;
 import org.jboss.dmr.ModelType;
-import org.jboss.logmanager.handlers.PeriodicRotatingFileHandler;
 
 public class PeriodicHandlerResourceDefinition extends FileHandlerResourceDefinition {
-
-    public static final String NAME = "periodic-rotating-file-handler";
+    private static final PathElement PERIODIC_HANDLER_PATH = PathElement.pathElement(EJB3SubsystemModel.PERIODIC_ROTATING_FILE_HANDLER);
 
     public static final SimpleAttributeDefinition SUFFIX = new SimpleAttributeDefinitionBuilder(EJB3SubsystemModel.SUFFIX, ModelType.STRING, true)
             .setAllowExpression(true)
             .setRestartAllServices()
             .build();
 
-    private static final PathElement PERIODIC_HANDLER_PATH = PathElement.pathElement(NAME);
-
-
     private static final AttributeDefinition[] ATTRIBUTES = {
-            // included in super class:
-            // FORMATTER, AUTOFLUSH, ENCODING, APPEND, PathResourceDefinition.PATH, PathResourceDefinition.RELATIVE_TO,
+            // declared in super class:
+            FORMATTER, AUTOFLUSH, ENCODING, APPEND, PathResourceDefinition.PATH, PathResourceDefinition.RELATIVE_TO,
             SUFFIX
     };
 
-    public static final PeriodicHandlerResourceDefinition INSTANCE = new PeriodicHandlerResourceDefinition();
-
-    public PeriodicHandlerResourceDefinition() {
-        super(path, type, resolvePathHandler, diskUsagePathHandler, attributes);
-    }
-
-    public PeriodicHandlerResourceDefinition(final ResolvePathHandler resolvePathHandler, final boolean includeLegacyAttributes) {
-        this(resolvePathHandler, null, includeLegacyAttributes);
-    }
-
-    public PeriodicHandlerResourceDefinition(final ResolvePathHandler resolvePathHandler, final PathInfoHandler diskUsagePathHandler, final boolean includeLegacyAttributes) {
-        super(PERIODIC_HANDLER_PATH, PeriodicRotatingFileHandler.class, resolvePathHandler, diskUsagePathHandler,
-                (includeLegacyAttributes ? Logging.join(ATTRIBUTES, LEGACY_ATTRIBUTES) : ATTRIBUTES));
+    public PeriodicHandlerResourceDefinition(final PathManager pathManager) {
+        super(PERIODIC_HANDLER_PATH, EJB3Extension.getResourceDescriptionResolver(EJB3SubsystemModel.PERIODIC_ROTATING_FILE_HANDLER),
+                new PeriodicHandlerAdd(ATTRIBUTES), PeriodicHandlerRemove.INSTANCE, pathManager);
     }
 
     @Override
-    public void registerAttributes(final ManagementResourceRegistration resourceRegistration) {
-        super.registerAttributes(resourceRegistration);
-        for (AttributeDefinition def : ATTRIBUTES) {
-            resourceRegistration.registerReadWriteAttribute(def, null, WriteAttributeHandler.INSTANCE);
+    AttributeDefinition[] getAttributes() {
+        return ATTRIBUTES;
+    }
+
+    private static class PeriodicHandlerAdd extends AbstractAddStepHandler {
+        private PeriodicHandlerAdd(AttributeDefinition[] attributes) {
+            super(attributes);
+        }
+
+        @Override
+        protected void performRuntime(final OperationContext context, final ModelNode operation, final ModelNode model) throws OperationFailedException {
+
         }
     }
+
+    private static class PeriodicHandlerRemove extends AbstractRemoveStepHandler {
+        private static PeriodicHandlerRemove INSTANCE = new PeriodicHandlerRemove();
+
+        private PeriodicHandlerRemove() {
+
+        }
+    }
+
 }

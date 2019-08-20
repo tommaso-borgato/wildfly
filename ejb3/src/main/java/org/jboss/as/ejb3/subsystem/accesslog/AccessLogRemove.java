@@ -25,9 +25,7 @@ package org.jboss.as.ejb3.subsystem.accesslog;
 import org.jboss.as.controller.AbstractRemoveStepHandler;
 import org.jboss.as.controller.OperationContext;
 import org.jboss.as.controller.OperationFailedException;
-import org.jboss.as.controller.PathAddress;
 import org.jboss.dmr.ModelNode;
-import org.jboss.msc.service.ServiceName;
 
 public class AccessLogRemove extends AbstractRemoveStepHandler {
 
@@ -35,12 +33,12 @@ public class AccessLogRemove extends AbstractRemoveStepHandler {
 
     @Override
     protected void performRuntime(OperationContext context, ModelNode operation, ModelNode model) {
-        final PathAddress hostAddress = context.getCurrentAddress().getParent();
-        final PathAddress serverAddress = hostAddress.getParent();
-        final String hostName = hostAddress.getLastElement().getValue();
-        final String serverName = serverAddress.getLastElement().getValue();
-        final ServiceName serviceName = UndertowService.accessLogServiceName(serverName, hostName);
-        context.removeService(serviceName);
+//        final PathAddress hostAddress = context.getCurrentAddress().getParent();
+//        final PathAddress serverAddress = hostAddress.getParent();
+//        final String hostName = hostAddress.getLastElement().getValue();
+//        final String serverName = serverAddress.getLastElement().getValue();
+//        final ServiceName serviceName = UndertowService.accessLogServiceName(serverName, hostName);
+//        context.removeService(serviceName);
     }
 
     protected void recoverServices(OperationContext context, ModelNode operation, ModelNode model) throws OperationFailedException {

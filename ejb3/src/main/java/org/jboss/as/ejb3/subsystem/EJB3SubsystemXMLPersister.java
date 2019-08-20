@@ -27,7 +27,8 @@ import javax.xml.stream.XMLStreamException;
 
 import org.jboss.as.controller.AttributeDefinition;
 import org.jboss.as.controller.persistence.SubsystemMarshallingContext;
-import org.jboss.as.ejb3.subsystem.accesslog.ConsoleHandlerResourceDefinition;
+import org.jboss.as.ejb3.subsystem.accesslog.JsonFormatterResourceDefinition;
+import org.jboss.as.ejb3.subsystem.accesslog.PatternFormatterResourceDefinition;
 import org.jboss.as.remoting.Attribute;
 import org.jboss.as.threads.ThreadsParser;
 import org.jboss.dmr.ModelNode;
@@ -323,11 +324,10 @@ public class EJB3SubsystemXMLPersister implements XMLElementWriter<SubsystemMars
 
         if (model.hasDefined(SERVICE) && model.get(SERVICE).hasDefined(ACCESS_LOG)) {
             writer.writeStartElement(EJB3SubsystemXMLElement.ACCESS_LOG.getLocalName());
-            final ModelNode accessLoggingServiceModel = model.get(SERVICE, ACCESS_LOG);
-            this.writeAccessLogging(writer, accessLoggingServiceModel);
+            final ModelNode accessLogServiceModel = model.get(SERVICE, ACCESS_LOG);
+            this.writeAccessLog(writer, accessLogServiceModel);
             writer.writeEndElement();
         }
-
     }
 
     private void writeIIOP(final XMLExtendedStreamWriter writer, final ModelNode model) throws XMLStreamException {
@@ -670,120 +670,168 @@ public class EJB3SubsystemXMLPersister implements XMLElementWriter<SubsystemMars
         writer.writeEndElement();
     }
 
-    private void writeAccessLogging(final XMLExtendedStreamWriter writer, final ModelNode accessLoggingModel) throws XMLStreamException {
-        writer.writeStartElement(EJB3SubsystemXMLElement.DATA_STORES.getLocalName());
-        writeConsoleAccessLogs(writer, accessLoggingModel);
-        writeFileAccessLogs(writer, accessLoggingModel);
+    private void writeAccessLog(final XMLExtendedStreamWriter writer, final ModelNode accessLogModel) throws XMLStreamException {
+        writer.writeStartElement(EJB3SubsystemXMLElement.ACCESS_LOG.getLocalName());
+        writeConsoleHandler(writer, accessLogModel);
+        writeFileHandler(writer, accessLogModel);
+        writePeriodicRotatingFileHandler(writer, accessLogModel);
+        writeServerLogHandler(writer, accessLogModel);
+        writePatternFormatters(writer, accessLogModel);
+        writeJsonFormatters(writer, accessLogModel);
         writer.writeEndElement();
     }
 
-    private void writeConsoleAccessLogs(final XMLExtendedStreamWriter writer, final ModelNode accessLoggingModel) throws XMLStreamException {
-        if (accessLoggingModel.hasDefined(EJB3SubsystemModel.CONSOLE_ACCESS_LOG)) {
-            List<Property> consoleLogs = accessLoggingModel.get(EJB3SubsystemModel.CONSOLE_ACCESS_LOG).asPropertyList();
-            for (Property property : consoleLogs) {
+    private void writeConsoleHandler(final XMLExtendedStreamWriter writer, final ModelNode accessLogModel) throws XMLStreamException {
+        if (accessLogModel.hasDefined(EJB3SubsystemModel.CONSOLE_HANDLER)) {
+            List<Property> handlerPropertyList = accessLogModel.get(EJB3SubsystemModel.CONSOLE_HANDLER).asPropertyList();
+            for (Property property : handlerPropertyList) {
                 writer.writeStartElement(EJB3SubsystemXMLElement.CONSOLE_HANDLER.getLocalName());
 
-                ModelNode log = property.getValue();
+                ModelNode handlerNode = property.getValue();
                 writer.writeAttribute(EJB3SubsystemXMLAttribute.NAME.getLocalName(), property.getName());
 
-                //TODO
-                ConsoleHandlerResourceDefinition.NAMED_FORMATTER.marshallAsAttribute(log, writer);
+                if (handlerNode.hasDefined(EJB3SubsystemModel.ENCODING)) {
+                    writer.writeAttribute(EJB3SubsystemXMLAttribute.ENCODING.getLocalName(), handlerNode.get(EJB3SubsystemModel.ENCODING).asString());
+                }
+                if (handlerNode.hasDefined(EJB3SubsystemModel.AUTOFLUSH)) {
+                    writer.writeAttribute(EJB3SubsystemXMLAttribute.AUTOFLUSH.getLocalName(), handlerNode.get(EJB3SubsystemModel.AUTOFLUSH).asString());
+                }
 
+                writeNamedFormatter(writer, handlerNode);
                 writer.writeEndElement();
             }
         }
     }
 
-    private void writeFileAccessLogs(final XMLExtendedStreamWriter writer, final ModelNode accessLoggingModel) throws XMLStreamException {
-        if (accessLoggingModel.hasDefined(EJB3SubsystemModel.FILE_ACCESS_LOG)) {
-            List<Property> fileLogs = accessLoggingModel.get(EJB3SubsystemModel.FILE_ACCESS_LOG).asPropertyList();
-            for (Property property : fileLogs) {
+    private void writeFileHandler(final XMLExtendedStreamWriter writer, final ModelNode accessLogModel) throws XMLStreamException {
+        if (accessLogModel.hasDefined(EJB3SubsystemModel.FILE_HANDLER)) {
+            List<Property> handlerPropertyList = accessLogModel.get(EJB3SubsystemModel.FILE_HANDLER).asPropertyList();
+            for (Property property : handlerPropertyList) {
                 writer.writeStartElement(EJB3SubsystemXMLElement.FILE_HANDLER.getLocalName());
 
-                ModelNode log = property.getValue();
+                ModelNode handlerNode = property.getValue();
                 writer.writeAttribute(EJB3SubsystemXMLAttribute.NAME.getLocalName(), property.getName());
 
-                //TODO
-                ConsoleHandlerResourceDefinition.NAMED_FORMATTER.marshallAsAttribute(log, writer);
+                if (handlerNode.hasDefined(EJB3SubsystemModel.ENCODING)) {
+                    writer.writeAttribute(EJB3SubsystemXMLAttribute.ENCODING.getLocalName(), handlerNode.get(EJB3SubsystemModel.ENCODING).asString());
+                }
+                if (handlerNode.hasDefined(EJB3SubsystemModel.AUTOFLUSH)) {
+                    writer.writeAttribute(EJB3SubsystemXMLAttribute.AUTOFLUSH.getLocalName(), handlerNode.get(EJB3SubsystemModel.AUTOFLUSH).asString());
+                }
+                if (handlerNode.hasDefined(EJB3SubsystemModel.APPEND)) {
+                    writer.writeAttribute(EJB3SubsystemXMLAttribute.APPEND.getLocalName(), handlerNode.get(EJB3SubsystemModel.APPEND).asString());
+                }
+                if (handlerNode.hasDefined(EJB3SubsystemModel.PATH)) {
+                    writer.writeAttribute(EJB3SubsystemXMLAttribute.PATH.getLocalName(), handlerNode.get(EJB3SubsystemModel.PATH).asString());
+                }
+                if (handlerNode.hasDefined(EJB3SubsystemModel.RELATIVE_TO)) {
+                    writer.writeAttribute(EJB3SubsystemXMLAttribute.RELATIVE_TO.getLocalName(), handlerNode.get(EJB3SubsystemModel.RELATIVE_TO).asString());
+                }
 
+                writeNamedFormatter(writer, handlerNode);
                 writer.writeEndElement();
             }
-
         }
     }
 
-    private void writePeriodicRotatingFileAccessLogs(final XMLExtendedStreamWriter writer, final ModelNode accessLoggingModel) throws XMLStreamException {
-        if (accessLoggingModel.hasDefined(EJB3SubsystemModel.PERIODIC_ROTATING_FILE_ACCESS_LOG)) {
-            List<Property> fileLogs = accessLoggingModel.get(EJB3SubsystemModel.PERIODIC_ROTATING_FILE_ACCESS_LOG).asPropertyList();
-            for (Property property : fileLogs) {
+    private void writePeriodicRotatingFileHandler(final XMLExtendedStreamWriter writer, final ModelNode accessLogModel) throws XMLStreamException {
+        if (accessLogModel.hasDefined(EJB3SubsystemModel.PERIODIC_ROTATING_FILE_HANDLER)) {
+            List<Property> handlerPropertyList = accessLogModel.get(EJB3SubsystemModel.PERIODIC_ROTATING_FILE_HANDLER).asPropertyList();
+            for (Property property : handlerPropertyList) {
                 writer.writeStartElement(EJB3SubsystemXMLElement.PERIODIC_ROTATING_FILE_HANDLER.getLocalName());
 
-                ModelNode log = property.getValue();
+                ModelNode handlerNode = property.getValue();
                 writer.writeAttribute(EJB3SubsystemXMLAttribute.NAME.getLocalName(), property.getName());
 
-                //TODO
-                ConsoleHandlerResourceDefinition.NAMED_FORMATTER.marshallAsAttribute(log, writer);
+                if (handlerNode.hasDefined(EJB3SubsystemModel.ENCODING)) {
+                    writer.writeAttribute(EJB3SubsystemXMLAttribute.ENCODING.getLocalName(), handlerNode.get(EJB3SubsystemModel.ENCODING).asString());
+                }
+                if (handlerNode.hasDefined(EJB3SubsystemModel.AUTOFLUSH)) {
+                    writer.writeAttribute(EJB3SubsystemXMLAttribute.AUTOFLUSH.getLocalName(), handlerNode.get(EJB3SubsystemModel.AUTOFLUSH).asString());
+                }
+                if (handlerNode.hasDefined(EJB3SubsystemModel.APPEND)) {
+                    writer.writeAttribute(EJB3SubsystemXMLAttribute.APPEND.getLocalName(), handlerNode.get(EJB3SubsystemModel.APPEND).asString());
+                }
+                if (handlerNode.hasDefined(EJB3SubsystemModel.PATH)) {
+                    writer.writeAttribute(EJB3SubsystemXMLAttribute.PATH.getLocalName(), handlerNode.get(EJB3SubsystemModel.PATH).asString());
+                }
+                if (handlerNode.hasDefined(EJB3SubsystemModel.RELATIVE_TO)) {
+                    writer.writeAttribute(EJB3SubsystemXMLAttribute.RELATIVE_TO.getLocalName(), handlerNode.get(EJB3SubsystemModel.RELATIVE_TO).asString());
+                }
+                if (handlerNode.hasDefined(EJB3SubsystemModel.SUFFIX)) {
+                    writer.writeAttribute(EJB3SubsystemXMLAttribute.SUFFIX.getLocalName(), handlerNode.get(EJB3SubsystemModel.SUFFIX).asString());
+                }
 
+                writeNamedFormatter(writer, handlerNode);
                 writer.writeEndElement();
             }
 
         }
     }
 
-    private void writeSizeRotatingFileAccessLogs(final XMLExtendedStreamWriter writer, final ModelNode accessLoggingModel) throws XMLStreamException {
-        if (accessLoggingModel.hasDefined(EJB3SubsystemModel.SIZE_ROTATING_FILE_ACCESS_LOG)) {
-            List<Property> fileLogs = accessLoggingModel.get(EJB3SubsystemModel.SIZE_ROTATING_FILE_ACCESS_LOG).asPropertyList();
-            for (Property property : fileLogs) {
-                writer.writeStartElement(EJB3SubsystemXMLElement.SIZE_ROTATING_FILE_ACCESS_LOG.getLocalName());
-
-                ModelNode log = property.getValue();
-                writer.writeAttribute(EJB3SubsystemXMLAttribute.NAME.getLocalName(), property.getName());
-
-                //TODO
-                ConsoleHandlerResourceDefinition.NAMED_FORMATTER.marshallAsAttribute(log, writer);
-
-                writer.writeEndElement();
-            }
-
-        }
-    }
-
-    private void writeServerLogAccessLog (final XMLExtendedStreamWriter writer, final ModelNode accessLoggingModel) throws XMLStreamException {
-        if (accessLoggingModel.hasDefined(EJB3SubsystemModel.SERVER_LOG_ACCESS_LOG)) {
-            List<Property> fileLogs = accessLoggingModel.get(EJB3SubsystemModel.SERVER_LOG_ACCESS_LOG).asPropertyList();
-            for (Property property : fileLogs) {
+    private void writeServerLogHandler(final XMLExtendedStreamWriter writer, final ModelNode accessLogModel) throws XMLStreamException {
+        if (accessLogModel.hasDefined(EJB3SubsystemModel.SERVER_LOG_HANDLER)) {
+            List<Property> handlerPropertyList = accessLogModel.get(EJB3SubsystemModel.SERVER_LOG_HANDLER).asPropertyList();
+            for (Property property : handlerPropertyList) {
                 writer.writeStartElement(EJB3SubsystemXMLElement.SERVER_LOG_HANDLER.getLocalName());
 
-                ModelNode log = property.getValue();
+                ModelNode handlerNode = property.getValue();
                 writer.writeAttribute(EJB3SubsystemXMLAttribute.NAME.getLocalName(), property.getName());
-
-                //TODO
-                ConsoleHandlerResourceDefinition.NAMED_FORMATTER.marshallAsAttribute(log, writer);
-
+                writeNamedFormatter(writer, handlerNode);
                 writer.writeEndElement();
             }
 
         }
     }
 
-    private void writeFormatters (final XMLExtendedStreamWriter writer, final ModelNode accessLoggingModel) throws XMLStreamException {
-        if (accessLoggingModel.hasDefined(EJB3SubsystemModel.FORMATTER)) {
-            List<Property> fileLogs = accessLoggingModel.get(EJB3SubsystemModel.FORMATTER).asPropertyList();
-            for (Property property : fileLogs) {
+    private void writeNamedFormatter(final XMLExtendedStreamWriter writer, final ModelNode accessLogHandlerNode) throws XMLStreamException {
+        if (accessLogHandlerNode.hasDefined(EJB3SubsystemModel.FORMATTER)) {
+            final String formatterName = accessLogHandlerNode.get(EJB3SubsystemModel.FORMATTER).asString();
+            writer.writeStartElement(EJB3SubsystemXMLElement.FORMATTER.getLocalName());
+            writer.writeAttribute(EJB3SubsystemXMLAttribute.NAME.getLocalName(), formatterName);
+            writer.writeEndElement();
+        }
+    }
+
+    private void writePatternFormatters(final XMLExtendedStreamWriter writer, final ModelNode accessLogModel) throws XMLStreamException {
+        if (accessLogModel.hasDefined(EJB3SubsystemModel.PATTERN_FORMATTER)) {
+            List<Property> patternFormatters = accessLogModel.get(EJB3SubsystemModel.PATTERN_FORMATTER).asPropertyList();
+            for (Property property : patternFormatters) {
                 writer.writeStartElement(EJB3SubsystemXMLElement.FORMATTER.getLocalName());
+                writer.writeStartElement(EJB3SubsystemXMLElement.PATTERN_FORMATTER.getLocalName());
 
-                ModelNode log = property.getValue();
+                ModelNode patternFormatter = property.getValue();
                 writer.writeAttribute(EJB3SubsystemXMLAttribute.NAME.getLocalName(), property.getName());
+                PatternFormatterResourceDefinition.PATTERN.marshallAsAttribute(patternFormatter, writer);
 
-                //TODO
-                ConsoleHandlerResourceDefinition.NAMED_FORMATTER.marshallAsAttribute(log, writer);
-
-                writer.writeEndElement();
+                writer.writeEndElement();  // end pattern-formatter element
+                writer.writeEndElement();  // end formatter element
             }
-
         }
     }
 
+    private void writeJsonFormatters(final XMLExtendedStreamWriter writer, final ModelNode accessLogModel) throws XMLStreamException {
+        if (accessLogModel.hasDefined(EJB3SubsystemModel.JSON_FORMATTER)) {
+            List<Property> jsonFormatters = accessLogModel.get(EJB3SubsystemModel.JSON_FORMATTER).asPropertyList();
+            for (Property property : jsonFormatters) {
+                writer.writeStartElement(EJB3SubsystemXMLElement.FORMATTER.getLocalName());
+                writer.writeStartElement(EJB3SubsystemXMLElement.JSON_FORMATTER.getLocalName());
+
+                ModelNode jsonFormatter = property.getValue();
+                writer.writeAttribute(EJB3SubsystemXMLAttribute.NAME.getLocalName(), property.getName());
+                PatternFormatterResourceDefinition.PATTERN.marshallAsAttribute(jsonFormatter, writer);
+                JsonFormatterResourceDefinition.DATE_FORMAT.marshallAsAttribute(jsonFormatter, writer);
+                JsonFormatterResourceDefinition.PRETTY_PRINT.marshallAsAttribute(jsonFormatter, writer);
+                JsonFormatterResourceDefinition.ZONE_ID.marshallAsAttribute(jsonFormatter, writer);
+                JsonFormatterResourceDefinition.RECORD_DELIMITER.marshallAsAttribute(jsonFormatter, writer);
+
+                JsonFormatterResourceDefinition.META_DATA.marshallAsElement(jsonFormatter, false, writer);
+
+                writer.writeEndElement();  // end json-formatter element
+                writer.writeEndElement();  // end formatter element
+            }
+        }
+    }
 
     private static void writeAttribute(XMLExtendedStreamWriter writer, ModelNode model, AttributeDefinition attribute) throws XMLStreamException {
         attribute.getAttributeMarshaller().marshallAsAttribute(attribute, model, true, writer);

@@ -123,6 +123,7 @@ public enum EJB3SubsystemXMLAttribute {
     ENCODING ("encoding"),
     APPEND("append"),
     SUFFIX("suffix"),
+    RECORD_DELIMITER("record-delimiter"),
     DATE_FORMAT("date-format"),
     PRETTY_PRINT("pretty-print"),
     ZONE_ID("zone-id")

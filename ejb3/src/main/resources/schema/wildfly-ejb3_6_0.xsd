@@ -651,10 +651,6 @@
         <xs:attribute name="suffix" type="xs:string" use="required" />
     </xs:complexType>
 
-    <xs:complexType name="valueType">
-        <xs:attribute name="value" use="required" type="xs:string"/>
-    </xs:complexType>
-
     <xs:complexType name="propertiesType">
         <xs:annotation>
             <xs:documentation>
@@ -692,7 +688,7 @@
             </xs:documentation>
         </xs:annotation>
         <xs:attribute name="name" type="xs:string" use="required"/>
-        <xs:attribute name="pattern" type="xs:string" use="required"/>
+        <xs:attribute name="pattern" type="xs:string"/>
     </xs:complexType>
 
     <xs:complexType name="namedFormatterType">
@@ -711,14 +707,6 @@
             </xs:documentation>
         </xs:annotation>
         <xs:all>
-            <xs:element name="record-delimiter" type="valueType" minOccurs="0">
-                <xs:annotation>
-                    <xs:documentation>
-                        The value to be used to indicate the end of a record. If set to null no delimiter will be used
-                        at the end of the record. The default value is a line feed.
-                    </xs:documentation>
-                </xs:annotation>
-            </xs:element>
             <xs:element name="meta-data" type="propertiesType" minOccurs="0">
                 <xs:annotation>
                     <xs:documentation>
@@ -728,7 +716,17 @@
             </xs:element>
         </xs:all>
         <xs:attribute name="name" type="xs:string" use="required"/>
-        <xs:attribute name="pattern" type="xs:string" use="required"/>
+        <xs:attribute name="pattern" type="xs:string"/>
+
+        <xs:attribute name="record-delimiter" type="xs:string">
+                <xs:annotation>
+                    <xs:documentation>
+                    The value to be used to indicate the end of a record. If set to null no delimiter will be used
+                    at the end of the record. The default value is a line feed.
+                    </xs:documentation>
+                </xs:annotation>
+        </xs:attribute>
+
         <xs:attribute name="date-format" type="xs:string">
             <xs:annotation>
                 <xs:documentation>

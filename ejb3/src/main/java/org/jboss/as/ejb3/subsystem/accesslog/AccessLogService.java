@@ -22,126 +22,53 @@
 
 package org.jboss.as.ejb3.subsystem.accesslog;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
-import io.undertow.attribute.ExchangeAttribute;
-import io.undertow.predicate.Predicate;
-import io.undertow.predicate.Predicates;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.handlers.accesslog.AccessLogHandler;
-import io.undertow.server.handlers.accesslog.AccessLogReceiver;
-import io.undertow.server.handlers.accesslog.DefaultAccessLogReceiver;
-import io.undertow.server.handlers.accesslog.ExtendedAccessLogParser;
-import io.undertow.server.handlers.accesslog.JBossLoggingAccessLogReceiver;
 import org.jboss.as.controller.services.path.PathManager;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.StartContext;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.service.StopContext;
 import org.jboss.msc.value.InjectedValue;
-import org.wildfly.extension.undertow.logging.UndertowLogger;
-import org.xnio.IoUtils;
-import org.xnio.XnioWorker;
 
 /**
  * A service that manages ejb access-log.
  */
 public class AccessLogService implements Service<AccessLogService> {
-    protected final InjectedValue<XnioWorker> worker = new InjectedValue<>();
     private final String pattern;
     private final String path;
     private final String pathRelativeTo;
     private final String filePrefix;
     private final String fileSuffix;
-    private final boolean rotate;
-    private final boolean useServerLog;
-    private final boolean extended;
-    private final Predicate predicate;
-    private volatile AccessLogReceiver logReceiver;
-
 
     private PathManager.Callback.Handle callbackHandle;
 
     private Path directory;
-    private ExchangeAttribute extendedPattern;
 
     private final InjectedValue<PathManager> pathManager = new InjectedValue<PathManager>();
 
-
-    AccessLogService(String pattern, boolean extended, Predicate predicate) {
+    AccessLogService(String pattern) {
         this.pattern = pattern;
-        this.extended = extended;
         this.path = null;
         this.pathRelativeTo = null;
         this.filePrefix = null;
         this.fileSuffix = null;
-        this.useServerLog = true;
-        this.rotate = false; //doesn't really matter
-        this.predicate = predicate == null ? Predicates.truePredicate() : predicate;
     }
 
-    AccessLogService(String pattern, String path, String pathRelativeTo, String filePrefix, String fileSuffix, boolean rotate, boolean extended, Predicate predicate) {
+    AccessLogService(String pattern, String path, String pathRelativeTo, String filePrefix, String fileSuffix, boolean rotate) {
         this.pattern = pattern;
         this.path = path;
         this.pathRelativeTo = pathRelativeTo;
         this.filePrefix = filePrefix;
         this.fileSuffix = fileSuffix;
-        this.rotate = rotate;
-        this.extended = extended;
-        this.useServerLog = false;
-        this.predicate = predicate == null ? Predicates.truePredicate() : predicate;
     }
 
     @Override
     public void start(StartContext context) throws StartException {
-        if (useServerLog) {
-            logReceiver = new JBossLoggingAccessLogReceiver();
-        } else {
-            if (pathRelativeTo != null) {
-                callbackHandle = pathManager.getValue().registerCallback(pathRelativeTo, PathManager.ReloadServerCallback.create(), PathManager.Event.UPDATED, PathManager.Event.REMOVED);
-            }
-            directory = Paths.get(pathManager.getValue().resolveRelativePathEntry(path, pathRelativeTo));
-            if (!Files.exists(directory)) {
-                try {
-                    Files.createDirectories(directory);
-                } catch (IOException e) {
-                    throw UndertowLogger.ROOT_LOGGER.couldNotCreateLogDirectory(directory, e);
-                }
-            }
-            try {
-                DefaultAccessLogReceiver.Builder builder = DefaultAccessLogReceiver.builder().setLogWriteExecutor(worker.getValue())
-                        .setOutputDirectory(directory)
-                        .setLogBaseName(filePrefix)
-                        .setLogNameSuffix(fileSuffix)
-                        .setRotate(rotate);
-                if(extended) {
-                    builder.setLogFileHeaderGenerator(new ExtendedAccessLogParser.ExtendedAccessLogHeaderGenerator(pattern));
-                    extendedPattern = new ExtendedAccessLogParser(getClass().getClassLoader()).parse(pattern);
-                } else {
-                    extendedPattern = null;
-                }
-                logReceiver = builder.build();
-            } catch (IllegalStateException e) {
-                throw new StartException(e);
-            }
-        }
-        host.getValue().setAccessLogService(this);
     }
 
     @Override
     public void stop(StopContext context) {
-        host.getValue().setAccessLogService(null);
-        if (callbackHandle != null) {
-            callbackHandle.remove();
-            callbackHandle = null;
-        }
-        if( logReceiver instanceof DefaultAccessLogReceiver ) {
-            IoUtils.safeClose((DefaultAccessLogReceiver) logReceiver);
-        }
-        logReceiver = null;
     }
 
     @Override
@@ -149,28 +76,8 @@ public class AccessLogService implements Service<AccessLogService> {
         return this;
     }
 
-    InjectedValue<XnioWorker> getWorker() {
-        return worker;
-    }
-
     InjectedValue<PathManager> getPathManager() {
         return pathManager;
-    }
-
-    protected AccessLogHandler configureAccessLogHandler(HttpHandler handler) {
-        if(extendedPattern != null) {
-            return new AccessLogHandler(handler, logReceiver, pattern, extendedPattern, predicate);
-        } else {
-            return new AccessLogHandler(handler, logReceiver, pattern, getClass().getClassLoader(), predicate);
-        }
-    }
-
-    public InjectedValue<Host> getHost() {
-        return host;
-    }
-
-    boolean isRotate() {
-        return rotate;
     }
 
     String getPath() {

@@ -22,24 +22,27 @@
 
 package org.jboss.as.ejb3.subsystem.accesslog;
 
+import org.jboss.as.controller.AbstractAddStepHandler;
+import org.jboss.as.controller.AbstractRemoveStepHandler;
 import org.jboss.as.controller.AttributeDefinition;
+import org.jboss.as.controller.OperationContext;
+import org.jboss.as.controller.OperationFailedException;
+import org.jboss.as.controller.OperationStepHandler;
 import org.jboss.as.controller.PathElement;
 import org.jboss.as.controller.SimpleAttributeDefinition;
 import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
-import org.jboss.as.controller.operations.global.WriteAttributeHandler;
+import org.jboss.as.controller.descriptions.ResourceDescriptionResolver;
 import org.jboss.as.controller.registry.ManagementResourceRegistration;
-import org.jboss.as.controller.services.path.PathInfoHandler;
+import org.jboss.as.controller.services.path.PathManager;
 import org.jboss.as.controller.services.path.PathResourceDefinition;
 import org.jboss.as.controller.services.path.ResolvePathHandler;
+import org.jboss.as.ejb3.subsystem.EJB3Extension;
 import org.jboss.as.ejb3.subsystem.EJB3SubsystemModel;
-import org.jboss.as.logging.Logging;
 import org.jboss.dmr.ModelNode;
 import org.jboss.dmr.ModelType;
-import org.jboss.logmanager.handlers.FileHandler;
 
 public class FileHandlerResourceDefinition extends ConsoleHandlerResourceDefinition {
-
-    public static final String NAME = "file-handler";
+    private static final PathElement FILE_HANDLER_PATH = PathElement.pathElement(EJB3SubsystemModel.FILE_HANDLER);
 
     public static final SimpleAttributeDefinition APPEND = new SimpleAttributeDefinitionBuilder(EJB3SubsystemModel.APPEND, ModelType.BOOLEAN, true)
             .setDefaultValue(new ModelNode(true))
@@ -47,33 +50,57 @@ public class FileHandlerResourceDefinition extends ConsoleHandlerResourceDefinit
             .setRestartAllServices()
             .build();
 
-    private static final PathElement FILE_HANDLER_PATH = PathElement.pathElement(NAME);
-
     private static final AttributeDefinition[] ATTRIBUTES = {
-                    // included in super class: FORMATTER, AUTOFLUSH, ENCODING,
-                    APPEND, PathResourceDefinition.PATH, PathResourceDefinition.RELATIVE_TO};
+            FORMATTER, AUTOFLUSH, ENCODING,      // declared in super class
+            APPEND, PathResourceDefinition.PATH, PathResourceDefinition.RELATIVE_TO};
 
-    public static final FileHandlerResourceDefinition INSTANCE = new FileHandlerResourceDefinition();
+    final PathManager pathManager;
 
-    public FileHandlerResourceDefinition() {
-        super(path, type, resolvePathHandler, diskUsagePathHandler, attributes);
+    public FileHandlerResourceDefinition(final PathManager pathManager) {
+        this(FILE_HANDLER_PATH, EJB3Extension.getResourceDescriptionResolver(EJB3SubsystemModel.FILE_HANDLER),
+                new FileHandlerAdd(ATTRIBUTES), FileHandlerRemove.INSTANCE, pathManager);
     }
 
-    public FileHandlerResourceDefinition(final ResolvePathHandler resolvePathHandler, final boolean includeLegacyAttributes) {
-        super(FILE_HANDLER_PATH, FileHandler.class, resolvePathHandler, null, (
-                includeLegacyAttributes ? Logging.join(ATTRIBUTES, LEGACY_ATTRIBUTES) : ATTRIBUTES));
-    }
-
-    public FileHandlerResourceDefinition(final ResolvePathHandler resolvePathHandler, final PathInfoHandler diskUsagePathHandler, final boolean includeLegacyAttributes) {
-        super(FILE_HANDLER_PATH, FileHandler.class, resolvePathHandler, diskUsagePathHandler, (
-                includeLegacyAttributes ? Logging.join(ATTRIBUTES, LEGACY_ATTRIBUTES) : ATTRIBUTES));
+    public FileHandlerResourceDefinition(final PathElement pathElement, final ResourceDescriptionResolver descriptionResolver,
+                                         final OperationStepHandler addHandler, final OperationStepHandler removeHandler,
+                                         final PathManager pathManager) {
+        super(pathElement, descriptionResolver, addHandler, removeHandler);
+        this.pathManager = pathManager;
     }
 
     @Override
-    public void registerAttributes(final ManagementResourceRegistration resourceRegistration) {
-        super.registerAttributes(resourceRegistration);
-        for (AttributeDefinition def : ATTRIBUTES) {
-            resourceRegistration.registerReadWriteAttribute(def, null, WriteAttributeHandler.INSTANCE);
+    AttributeDefinition[] getAttributes() {
+        return ATTRIBUTES;
+    }
+
+    @Override
+    public void registerOperations(final ManagementResourceRegistration resourceRegistration) {
+        super.registerOperations(resourceRegistration);
+        if (pathManager != null) {
+            final ResolvePathHandler resolvePathHandler = ResolvePathHandler.Builder.of(pathManager)
+                    .setPathAttribute(PathResourceDefinition.PATH)
+                    .setRelativeToAttribute(PathResourceDefinition.RELATIVE_TO)
+                    .build();
+            resourceRegistration.registerOperationHandler(resolvePathHandler.getOperationDefinition(), resolvePathHandler);
+        }
+    }
+
+    private static class FileHandlerAdd extends AbstractAddStepHandler {
+        private FileHandlerAdd(AttributeDefinition[] attributes) {
+            super(attributes);
+        }
+
+        @Override
+        protected void performRuntime(final OperationContext context, final ModelNode operation, final ModelNode model) throws OperationFailedException {
+
+        }
+    }
+
+    private static class FileHandlerRemove extends AbstractRemoveStepHandler {
+        private static FileHandlerRemove INSTANCE = new FileHandlerRemove();
+
+        private FileHandlerRemove() {
+
         }
     }
 }
