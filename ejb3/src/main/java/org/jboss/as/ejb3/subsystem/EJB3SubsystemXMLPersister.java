@@ -22,20 +22,6 @@
 
 package org.jboss.as.ejb3.subsystem;
 
-import java.util.List;
-import javax.xml.stream.XMLStreamException;
-
-import org.jboss.as.controller.AttributeDefinition;
-import org.jboss.as.controller.persistence.SubsystemMarshallingContext;
-import org.jboss.as.ejb3.subsystem.accesslog.JsonFormatterResourceDefinition;
-import org.jboss.as.ejb3.subsystem.accesslog.PatternFormatterResourceDefinition;
-import org.jboss.as.remoting.Attribute;
-import org.jboss.as.threads.ThreadsParser;
-import org.jboss.dmr.ModelNode;
-import org.jboss.dmr.Property;
-import org.jboss.staxmapper.XMLElementWriter;
-import org.jboss.staxmapper.XMLExtendedStreamWriter;
-
 import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.ACCESS_LOG;
 import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.ALLOW_EJB_NAME_REGEX;
 import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.APPLICATION_SECURITY_DOMAIN;
@@ -62,6 +48,20 @@ import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.SERVICE;
 import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.STATISTICS_ENABLED;
 import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.THREAD_POOL;
 import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.TIMER_SERVICE;
+
+import java.util.List;
+import javax.xml.stream.XMLStreamException;
+
+import org.jboss.as.controller.AttributeDefinition;
+import org.jboss.as.controller.persistence.SubsystemMarshallingContext;
+import org.jboss.as.ejb3.subsystem.accesslog.JsonFormatterResourceDefinition;
+import org.jboss.as.ejb3.subsystem.accesslog.PatternFormatterResourceDefinition;
+import org.jboss.as.remoting.Attribute;
+import org.jboss.as.threads.ThreadsParser;
+import org.jboss.dmr.ModelNode;
+import org.jboss.dmr.Property;
+import org.jboss.staxmapper.XMLElementWriter;
+import org.jboss.staxmapper.XMLExtendedStreamWriter;
 
 /**
  * The {@link XMLElementWriter} that handles the EJB subsystem. As we only write out the most recent version of
@@ -323,10 +323,8 @@ public class EJB3SubsystemXMLPersister implements XMLElementWriter<SubsystemMars
         }
 
         if (model.hasDefined(SERVICE) && model.get(SERVICE).hasDefined(ACCESS_LOG)) {
-            writer.writeStartElement(EJB3SubsystemXMLElement.ACCESS_LOG.getLocalName());
             final ModelNode accessLogServiceModel = model.get(SERVICE, ACCESS_LOG);
             this.writeAccessLog(writer, accessLogServiceModel);
-            writer.writeEndElement();
         }
     }
 

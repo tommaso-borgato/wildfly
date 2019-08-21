@@ -62,7 +62,7 @@ public class ServerLogHandlerResourceDefinition extends SimpleResourceDefinition
 
     public ServerLogHandlerResourceDefinition() {
         this(SERVER_LOG_HANDLER_PATH, EJB3Extension.getResourceDescriptionResolver(EJB3SubsystemModel.SERVER_LOG_HANDLER),
-                new ServerLogHandlerAdd(ATTRIBUTES), ServerLogHandlerRemove.INSTANCE);
+                ServerLogHandlerAdd.INSTANCE, ServerLogHandlerRemove.INSTANCE);
     }
 
     public ServerLogHandlerResourceDefinition(final PathElement pathElement, final ResourceDescriptionResolver descriptionResolver,
@@ -87,8 +87,15 @@ public class ServerLogHandlerResourceDefinition extends SimpleResourceDefinition
     }
 
     private static class ServerLogHandlerAdd extends AbstractAddStepHandler {
-        private ServerLogHandlerAdd(AttributeDefinition[] attributes) {
-            super(attributes);
+        static ServerLogHandlerAdd INSTANCE = new ServerLogHandlerAdd();
+
+        private ServerLogHandlerAdd() {}
+
+        @Override
+        protected void populateModel(ModelNode operation, ModelNode model) throws OperationFailedException {
+            for (AttributeDefinition attr : ServerLogHandlerResourceDefinition.ATTRIBUTES) {
+                attr.validateAndSet(operation, model);
+            }
         }
 
         @Override
@@ -101,7 +108,6 @@ public class ServerLogHandlerResourceDefinition extends SimpleResourceDefinition
         private static ServerLogHandlerRemove INSTANCE = new ServerLogHandlerRemove();
 
         private ServerLogHandlerRemove() {
-
         }
     }
 }

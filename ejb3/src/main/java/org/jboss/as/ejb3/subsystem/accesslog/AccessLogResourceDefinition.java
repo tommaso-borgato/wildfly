@@ -22,12 +22,7 @@
 
 package org.jboss.as.ejb3.subsystem.accesslog;
 
-import java.util.List;
-
 import org.jboss.as.controller.SimpleResourceDefinition;
-import org.jboss.as.controller.access.constraint.SensitivityClassification;
-import org.jboss.as.controller.access.management.AccessConstraintDefinition;
-import org.jboss.as.controller.access.management.SensitiveTargetAccessConstraintDefinition;
 import org.jboss.as.controller.capability.RuntimeCapability;
 import org.jboss.as.controller.registry.ManagementResourceRegistration;
 import org.jboss.as.controller.services.path.PathManager;
@@ -43,8 +38,6 @@ public class AccessLogResourceDefinition extends SimpleResourceDefinition {
     static final RuntimeCapability<Void> ACCESS_LOG_RUNTIME_CAPABILITY = RuntimeCapability.Builder.of(ACCESS_LOG_CAPABILITY, true, AccessLogService.class)
               .build();
 
-    private final List<AccessConstraintDefinition> accessConstraints;
-
     private final PathManager pathManager;
 
     public AccessLogResourceDefinition(final PathManager pathManager) {
@@ -54,13 +47,6 @@ public class AccessLogResourceDefinition extends SimpleResourceDefinition {
                 .setCapabilities(ACCESS_LOG_RUNTIME_CAPABILITY)
         );
         this.pathManager = pathManager;
-        SensitivityClassification sc = new SensitivityClassification(EJB3Extension.SUBSYSTEM_NAME, "ejb-access-log", false, false, false);
-        this.accessConstraints = new SensitiveTargetAccessConstraintDefinition(sc).wrapAsList();
-    }
-
-    @Override
-    public List<AccessConstraintDefinition> getAccessConstraints() {
-        return accessConstraints;
     }
 
     @Override

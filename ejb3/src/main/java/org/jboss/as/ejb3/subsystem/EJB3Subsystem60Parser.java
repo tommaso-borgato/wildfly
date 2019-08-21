@@ -22,30 +22,17 @@
 
 package org.jboss.as.ejb3.subsystem;
 
-import java.util.List;
-import javax.xml.stream.XMLStreamConstants;
-import javax.xml.stream.XMLStreamException;
-
-import org.jboss.as.controller.PathAddress;
-import org.jboss.as.controller.PathElement;
-import org.jboss.as.controller.operations.common.Util;
-import org.jboss.as.controller.services.path.PathResourceDefinition;
-import org.jboss.as.ejb3.subsystem.accesslog.ConsoleHandlerResourceDefinition;
-import org.jboss.as.ejb3.subsystem.accesslog.FileHandlerResourceDefinition;
-import org.jboss.as.ejb3.subsystem.accesslog.JsonFormatterResourceDefinition;
-import org.jboss.as.ejb3.subsystem.accesslog.PatternFormatterResourceDefinition;
-import org.jboss.as.ejb3.subsystem.accesslog.PeriodicHandlerResourceDefinition;
-import org.jboss.as.ejb3.subsystem.accesslog.ServerLogHandlerResourceDefinition;
-import org.jboss.dmr.ModelNode;
-import org.jboss.staxmapper.XMLExtendedStreamReader;
-
+import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.ADD;
+import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.OP;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.OP_ADDR;
+import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.SUBSYSTEM;
 import static org.jboss.as.controller.parsing.ParseUtils.missingRequired;
 import static org.jboss.as.controller.parsing.ParseUtils.requireNoAttributes;
 import static org.jboss.as.controller.parsing.ParseUtils.requireNoContent;
 import static org.jboss.as.controller.parsing.ParseUtils.requireNoNamespaceAttribute;
 import static org.jboss.as.controller.parsing.ParseUtils.unexpectedAttribute;
 import static org.jboss.as.controller.parsing.ParseUtils.unexpectedElement;
+import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.ACCESS_LOG;
 import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.CLASS;
 import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.CONSOLE_HANDLER;
 import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.FILE_HANDLER;
@@ -55,6 +42,21 @@ import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.PATTERN_FORMATTER;
 import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.PERIODIC_ROTATING_FILE_HANDLER;
 import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.SERVER_INTERCEPTORS;
 import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.SERVER_LOG_HANDLER;
+import static org.jboss.as.ejb3.subsystem.EJB3SubsystemModel.SERVICE;
+
+import java.util.List;
+import javax.xml.stream.XMLStreamConstants;
+import javax.xml.stream.XMLStreamException;
+
+import org.jboss.as.controller.services.path.PathResourceDefinition;
+import org.jboss.as.ejb3.subsystem.accesslog.ConsoleHandlerResourceDefinition;
+import org.jboss.as.ejb3.subsystem.accesslog.FileHandlerResourceDefinition;
+import org.jboss.as.ejb3.subsystem.accesslog.JsonFormatterResourceDefinition;
+import org.jboss.as.ejb3.subsystem.accesslog.PatternFormatterResourceDefinition;
+import org.jboss.as.ejb3.subsystem.accesslog.PeriodicHandlerResourceDefinition;
+import org.jboss.as.ejb3.subsystem.accesslog.ServerLogHandlerResourceDefinition;
+import org.jboss.dmr.ModelNode;
+import org.jboss.staxmapper.XMLExtendedStreamReader;
 
 /**
  * Parser for ejb3:6.0 namespace.
@@ -79,7 +81,7 @@ public class EJB3Subsystem60Parser extends EJB3Subsystem50Parser {
                 break;
             }
             case ACCESS_LOG: {
-                parseAccessLog(reader, operations, ejb3SubsystemAddOperation);
+                parseAccessLog(reader, operations);
                 break;
             }
             default: {
@@ -134,33 +136,37 @@ public class EJB3Subsystem60Parser extends EJB3Subsystem50Parser {
     }
 
     private void parseAccessLog(final XMLExtendedStreamReader reader,
-                                final List<ModelNode> operations,
-                                final ModelNode ejb3SubsystemAddOperation) throws XMLStreamException {
+                                final List<ModelNode> operations) throws XMLStreamException {
         requireNoAttributes(reader);
 
-        final PathAddress accessLogAddress = PathAddress.pathAddress(EJB3SubsystemModel.ACCESS_LOG_PATH);
-        ModelNode accessLogAddOperation = Util.createAddOperation(accessLogAddress);
+        final ModelNode address = new ModelNode();
+        address.add(SUBSYSTEM, EJB3Extension.SUBSYSTEM_NAME);
+        address.add(SERVICE, ACCESS_LOG);
+        final ModelNode accessLogAddOperation = new ModelNode();
+        accessLogAddOperation.get(OP).set(ADD);
+        accessLogAddOperation.get(OP_ADDR).set(address);
+        operations.add(accessLogAddOperation);
 
         while (reader.hasNext() && reader.nextTag() != XMLStreamConstants.END_ELEMENT) {
             switch (EJB3SubsystemXMLElement.forName(reader.getLocalName())) {
                 case CONSOLE_HANDLER: {
-                    parseConsoleHandler(reader, operations, accessLogAddress);
+                    parseConsoleHandler(reader, operations);
                     break;
                 }
                 case FILE_HANDLER: {
-                    parseFileHandler(reader, operations, accessLogAddress);
+                    parseFileHandler(reader, operations);
                     break;
                 }
                 case PERIODIC_ROTATING_FILE_HANDLER: {
-                    parsePeriodicRotatingFileHandler(reader, operations, accessLogAddress);
+                    parsePeriodicRotatingFileHandler(reader, operations);
                     break;
                 }
                 case SERVER_LOG_HANDLER: {
-                    parseServerLogHandler(reader, operations, accessLogAddress);
+                    parseServerLogHandler(reader, operations);
                     break;
                 }
                 case FORMATTER: {
-                    parseFormatter(reader, operations, accessLogAddress);
+                    parseFormatter(reader, operations);
                     break;
                 }
                 default: {
@@ -168,20 +174,18 @@ public class EJB3Subsystem60Parser extends EJB3Subsystem50Parser {
                 }
             }
         }
-        operations.add(accessLogAddOperation);
     }
 
     private void parseFormatter(final XMLExtendedStreamReader reader,
-                                final List<ModelNode> operations,
-                                final PathAddress accessLogAddress) throws XMLStreamException {
+                                final List<ModelNode> operations) throws XMLStreamException {
         requireNoAttributes(reader);
         while (reader.hasNext() && reader.nextTag() != XMLStreamConstants.END_ELEMENT) {
             switch (EJB3SubsystemXMLElement.forName(reader.getLocalName())) {
                 case PATTERN_FORMATTER:
-                    parsePatternFormatter(reader, operations, accessLogAddress);
+                    parsePatternFormatter(reader, operations);
                     break;
                 case JSON_FORMATTER:
-                    parseJsonFormatter(reader, operations, accessLogAddress);
+                    parseJsonFormatter(reader, operations);
                     break;
                 default: {
                     throw unexpectedElement(reader);
@@ -191,10 +195,11 @@ public class EJB3Subsystem60Parser extends EJB3Subsystem50Parser {
     }
 
     private void parsePatternFormatter(final XMLExtendedStreamReader reader,
-                                       final List<ModelNode> operations,
-                                       final PathAddress accessLogAddress) throws XMLStreamException {
+                                       final List<ModelNode> operations) throws XMLStreamException {
         String formatterName = null;
-        ModelNode formatterAddOperation = Util.createAddOperation();
+        final ModelNode formatterAddOperation = new ModelNode();
+        formatterAddOperation.get(OP).set(ADD);
+
         final int count = reader.getAttributeCount();
         for (int i = 0; i < count; i++) {
             requireNoNamespaceAttribute(reader, i);
@@ -215,18 +220,22 @@ public class EJB3Subsystem60Parser extends EJB3Subsystem50Parser {
             throw missingRequired(reader, EJB3SubsystemXMLAttribute.NAME.getLocalName());
         }
 
-        requireNoContent(reader);
-
-        final PathAddress address = accessLogAddress.append(PathElement.pathElement(PATTERN_FORMATTER, formatterName));
-        formatterAddOperation.get(OP_ADDR).set(address.toModelNode());
+        final ModelNode address = new ModelNode();
+        address.add(SUBSYSTEM, EJB3Extension.SUBSYSTEM_NAME);
+        address.add(SERVICE, ACCESS_LOG);
+        address.add(PATTERN_FORMATTER, formatterName);
+        formatterAddOperation.get(OP_ADDR).set(address);
         operations.add(formatterAddOperation);
+
+        requireNoContent(reader);
     }
 
     private void parseJsonFormatter(final XMLExtendedStreamReader reader,
-                                    final List<ModelNode> operations,
-                                    final PathAddress accessLogAddress) throws XMLStreamException {
+                                    final List<ModelNode> operations) throws XMLStreamException {
         String formatterName = null;
-        ModelNode formatterAddOperation = Util.createAddOperation();
+        final ModelNode formatterAddOperation = new ModelNode();
+        formatterAddOperation.get(OP).set(ADD);
+
         final int count = reader.getAttributeCount();
         for (int i = 0; i < count; i++) {
             requireNoNamespaceAttribute(reader, i);
@@ -259,6 +268,13 @@ public class EJB3Subsystem60Parser extends EJB3Subsystem50Parser {
             throw missingRequired(reader, EJB3SubsystemXMLAttribute.NAME.getLocalName());
         }
 
+        final ModelNode address = new ModelNode();
+        address.add(SUBSYSTEM, EJB3Extension.SUBSYSTEM_NAME);
+        address.add(SERVICE, ACCESS_LOG);
+        address.add(JSON_FORMATTER, formatterName);
+        formatterAddOperation.get(OP_ADDR).set(address);
+        operations.add(formatterAddOperation);
+
         while (reader.hasNext() && reader.nextTag() != XMLStreamConstants.END_ELEMENT) {
             switch (EJB3SubsystemXMLElement.forName(reader.getLocalName())) {
                 case META_DATA:
@@ -269,18 +285,14 @@ public class EJB3Subsystem60Parser extends EJB3Subsystem50Parser {
                 }
             }
         }
-
-        final PathAddress address = accessLogAddress.append(PathElement.pathElement(JSON_FORMATTER, formatterName));
-        formatterAddOperation.get(OP_ADDR).set(address.toModelNode());
-        operations.add(formatterAddOperation);
     }
 
-
     private void parseServerLogHandler(final XMLExtendedStreamReader reader,
-                                       final List<ModelNode> operations,
-                                       final PathAddress accessLogAddress) throws XMLStreamException {
+                                       final List<ModelNode> operations) throws XMLStreamException {
         String handlerName = null;
-        ModelNode handlerAddOperation = Util.createAddOperation();
+        final ModelNode handlerAddOperation = new ModelNode();
+        handlerAddOperation.get(OP).set(ADD);
+
         final int count = reader.getAttributeCount();
         for (int i = 0; i < count; i++) {
             requireNoNamespaceAttribute(reader, i);
@@ -298,31 +310,33 @@ public class EJB3Subsystem60Parser extends EJB3Subsystem50Parser {
             throw missingRequired(reader, EJB3SubsystemXMLAttribute.NAME.getLocalName());
         }
 
-        readAndParseHandlerFormatter(reader, handlerAddOperation);
-
-        final PathAddress address = accessLogAddress.append(PathElement.pathElement(SERVER_LOG_HANDLER, handlerName));
-        handlerAddOperation.get(OP_ADDR).set(address.toModelNode());
+        final ModelNode address = new ModelNode();
+        address.add(SUBSYSTEM, EJB3Extension.SUBSYSTEM_NAME);
+        address.add(SERVICE, ACCESS_LOG);
+        address.add(SERVER_LOG_HANDLER, handlerName);
+        handlerAddOperation.get(OP_ADDR).set(address);
         operations.add(handlerAddOperation);
+
+        readAndParseHandlerFormatter(reader, handlerAddOperation);
     }
 
     private void parsePeriodicRotatingFileHandler(final XMLExtendedStreamReader reader,
-                                                  final List<ModelNode> operations,
-                                                  final PathAddress accessLogAddress) throws XMLStreamException {
-        parseFileHandlerOrPeriodicRotatingFileHandler(reader, operations, accessLogAddress, PERIODIC_ROTATING_FILE_HANDLER);
+                                                  final List<ModelNode> operations) throws XMLStreamException {
+        parseFileHandlerOrPeriodicRotatingFileHandler(reader, operations, PERIODIC_ROTATING_FILE_HANDLER);
     }
 
     private void parseFileHandler(final XMLExtendedStreamReader reader,
-                                  final List<ModelNode> operations,
-                                  final PathAddress accessLogAddress) throws XMLStreamException {
-        parseFileHandlerOrPeriodicRotatingFileHandler(reader, operations, accessLogAddress, FILE_HANDLER);
+                                  final List<ModelNode> operations) throws XMLStreamException {
+        parseFileHandlerOrPeriodicRotatingFileHandler(reader, operations, FILE_HANDLER);
     }
 
     private void parseFileHandlerOrPeriodicRotatingFileHandler(final XMLExtendedStreamReader reader,
                                                                final List<ModelNode> operations,
-                                                               final PathAddress accessLogAddress,
                                                                final String handlerType) throws XMLStreamException {
         String handlerName = null;
-        ModelNode handlerAddOperation = Util.createAddOperation();
+        final ModelNode handlerAddOperation = new ModelNode();
+        handlerAddOperation.get(OP).set(ADD);
+
         final int count = reader.getAttributeCount();
         for (int i = 0; i < count; i++) {
             requireNoNamespaceAttribute(reader, i);
@@ -362,18 +376,22 @@ public class EJB3Subsystem60Parser extends EJB3Subsystem50Parser {
             throw missingRequired(reader, EJB3SubsystemXMLAttribute.NAME.getLocalName());
         }
 
-        readAndParseHandlerFormatter(reader, handlerAddOperation);
-
-        final PathAddress address = accessLogAddress.append(PathElement.pathElement(handlerType, handlerName));
-        handlerAddOperation.get(OP_ADDR).set(address.toModelNode());
+        final ModelNode address = new ModelNode();
+        address.add(SUBSYSTEM, EJB3Extension.SUBSYSTEM_NAME);
+        address.add(SERVICE, ACCESS_LOG);
+        address.add(handlerType, handlerName);
+        handlerAddOperation.get(OP_ADDR).set(address);
         operations.add(handlerAddOperation);
+
+        readAndParseHandlerFormatter(reader, handlerAddOperation);
     }
 
     private void parseConsoleHandler(final XMLExtendedStreamReader reader,
-                                     final List<ModelNode> operations,
-                                     final PathAddress accessLogAddress) throws XMLStreamException {
+                                     final List<ModelNode> operations) throws XMLStreamException {
         String handlerName = null;
-        ModelNode handlerAddOperation = Util.createAddOperation();
+        final ModelNode handlerAddOperation = new ModelNode();
+        handlerAddOperation.get(OP).set(ADD);
+
         final int count = reader.getAttributeCount();
         for (int i = 0; i < count; i++) {
             requireNoNamespaceAttribute(reader, i);
@@ -397,11 +415,14 @@ public class EJB3Subsystem60Parser extends EJB3Subsystem50Parser {
             throw missingRequired(reader, EJB3SubsystemXMLAttribute.NAME.getLocalName());
         }
 
-        readAndParseHandlerFormatter(reader, handlerAddOperation);
-
-        final PathAddress address = accessLogAddress.append(PathElement.pathElement(CONSOLE_HANDLER, handlerName));
-        handlerAddOperation.get(OP_ADDR).set(address.toModelNode());
+        final ModelNode address = new ModelNode();
+        address.add(SUBSYSTEM, EJB3Extension.SUBSYSTEM_NAME);
+        address.add(SERVICE, ACCESS_LOG);
+        address.add(CONSOLE_HANDLER, handlerName);
+        handlerAddOperation.get(OP_ADDR).set(address);
         operations.add(handlerAddOperation);
+
+        readAndParseHandlerFormatter(reader, handlerAddOperation);
     }
 
     private void readAndParseHandlerFormatter(final XMLExtendedStreamReader reader,

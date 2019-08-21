@@ -60,7 +60,7 @@ public class ConsoleHandlerResourceDefinition extends ServerLogHandlerResourceDe
 
     public ConsoleHandlerResourceDefinition() {
         this(CONSOLE_HANDLER_PATH, EJB3Extension.getResourceDescriptionResolver(EJB3SubsystemModel.CONSOLE_HANDLER),
-                new ConsoleHandlerAdd(ATTRIBUTES), ConsoleHandlerRemove.INSTANCE);
+                ConsoleHandlerAdd.INSTANCE, ConsoleHandlerRemove.INSTANCE);
     }
 
     public ConsoleHandlerResourceDefinition(final PathElement pathElement, final ResourceDescriptionResolver descriptionResolver,
@@ -74,8 +74,15 @@ public class ConsoleHandlerResourceDefinition extends ServerLogHandlerResourceDe
     }
 
     private static class ConsoleHandlerAdd extends AbstractAddStepHandler {
-        private ConsoleHandlerAdd(AttributeDefinition[] attributes) {
-            super(attributes);
+        static ConsoleHandlerAdd INSTANCE = new ConsoleHandlerAdd();
+
+        private ConsoleHandlerAdd() {}
+
+        @Override
+        protected void populateModel(ModelNode operation, ModelNode model) throws OperationFailedException {
+            for (AttributeDefinition attr : ConsoleHandlerResourceDefinition.ATTRIBUTES) {
+                attr.validateAndSet(operation, model);
+            }
         }
 
         @Override

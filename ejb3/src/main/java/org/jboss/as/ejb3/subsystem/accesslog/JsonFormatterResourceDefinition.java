@@ -26,6 +26,7 @@ import org.jboss.as.controller.AbstractAddStepHandler;
 import org.jboss.as.controller.AbstractRemoveStepHandler;
 import org.jboss.as.controller.AttributeDefinition;
 import org.jboss.as.controller.AttributeMarshallers;
+import org.jboss.as.controller.OperationFailedException;
 import org.jboss.as.controller.PathElement;
 import org.jboss.as.controller.SimpleAttributeDefinition;
 import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
@@ -41,7 +42,7 @@ public class JsonFormatterResourceDefinition extends PatternFormatterResourceDef
 
     private JsonFormatterResourceDefinition() {
         super(PATH, EJB3Extension.getResourceDescriptionResolver(EJB3SubsystemModel.JSON_FORMATTER),
-                new JsonFormatterAdd(ATTRIBUTES), JsonFormatterRemove.INSTANCE);
+                JsonFormatterAdd.INSTANCE, JsonFormatterRemove.INSTANCE);
     }
 
     public static final SimpleAttributeDefinition DATE_FORMAT = new SimpleAttributeDefinitionBuilder(EJB3SubsystemModel.DATE_FORMAT, ModelType.STRING, true)
@@ -81,8 +82,15 @@ public class JsonFormatterResourceDefinition extends PatternFormatterResourceDef
     }
 
     private static class JsonFormatterAdd extends AbstractAddStepHandler {
-        private JsonFormatterAdd(AttributeDefinition[] attributes) {
-            super(attributes);
+        static JsonFormatterAdd INSTANCE = new JsonFormatterAdd();
+
+        private JsonFormatterAdd() {}
+
+        @Override
+        protected void populateModel(ModelNode operation, ModelNode model) throws OperationFailedException {
+            for (AttributeDefinition attr : JsonFormatterResourceDefinition.ATTRIBUTES) {
+                attr.validateAndSet(operation, model);
+            }
         }
     }
 

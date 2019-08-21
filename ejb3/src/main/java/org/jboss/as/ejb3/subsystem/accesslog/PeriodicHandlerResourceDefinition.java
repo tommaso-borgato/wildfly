@@ -53,7 +53,7 @@ public class PeriodicHandlerResourceDefinition extends FileHandlerResourceDefini
 
     public PeriodicHandlerResourceDefinition(final PathManager pathManager) {
         super(PERIODIC_HANDLER_PATH, EJB3Extension.getResourceDescriptionResolver(EJB3SubsystemModel.PERIODIC_ROTATING_FILE_HANDLER),
-                new PeriodicHandlerAdd(ATTRIBUTES), PeriodicHandlerRemove.INSTANCE, pathManager);
+                PeriodicHandlerAdd.INSTANCE, PeriodicHandlerRemove.INSTANCE, pathManager);
     }
 
     @Override
@@ -62,8 +62,15 @@ public class PeriodicHandlerResourceDefinition extends FileHandlerResourceDefini
     }
 
     private static class PeriodicHandlerAdd extends AbstractAddStepHandler {
-        private PeriodicHandlerAdd(AttributeDefinition[] attributes) {
-            super(attributes);
+        static PeriodicHandlerAdd INSTANCE = new PeriodicHandlerAdd();
+
+        private PeriodicHandlerAdd() {}
+
+        @Override
+        protected void populateModel(ModelNode operation, ModelNode model) throws OperationFailedException {
+            for (AttributeDefinition attr : PeriodicHandlerResourceDefinition.ATTRIBUTES) {
+                attr.validateAndSet(operation, model);
+            }
         }
 
         @Override

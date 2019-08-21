@@ -25,6 +25,7 @@ package org.jboss.as.ejb3.subsystem.accesslog;
 import org.jboss.as.controller.AbstractAddStepHandler;
 import org.jboss.as.controller.AbstractRemoveStepHandler;
 import org.jboss.as.controller.AttributeDefinition;
+import org.jboss.as.controller.OperationFailedException;
 import org.jboss.as.controller.OperationStepHandler;
 import org.jboss.as.controller.PathElement;
 import org.jboss.as.controller.ReadResourceNameOperationStepHandler;
@@ -64,7 +65,7 @@ public class PatternFormatterResourceDefinition extends SimpleResourceDefinition
 
     public PatternFormatterResourceDefinition() {
         this(PATH, EJB3Extension.getResourceDescriptionResolver(EJB3SubsystemModel.PATTERN_FORMATTER),
-                new PatternFormatterAdd(ATTRIBUTES), PatternFormatterRemove.INSTANCE);
+                PatternFormatterAdd.INSTANCE, PatternFormatterRemove.INSTANCE);
     }
 
     public PatternFormatterResourceDefinition(final PathElement pathElement, final ResourceDescriptionResolver descriptionResolver,
@@ -85,8 +86,15 @@ public class PatternFormatterResourceDefinition extends SimpleResourceDefinition
     }
 
     private static class PatternFormatterAdd extends AbstractAddStepHandler {
-        private PatternFormatterAdd(AttributeDefinition[] attributes) {
-            super(attributes);
+        static PatternFormatterAdd INSTANCE = new PatternFormatterAdd();
+
+        private PatternFormatterAdd() {}
+
+        @Override
+        protected void populateModel(ModelNode operation, ModelNode model) throws OperationFailedException {
+            for (AttributeDefinition attr : PatternFormatterResourceDefinition.ATTRIBUTES) {
+                attr.validateAndSet(operation, model);
+            }
         }
     }
 

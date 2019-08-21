@@ -58,7 +58,7 @@ public class FileHandlerResourceDefinition extends ConsoleHandlerResourceDefinit
 
     public FileHandlerResourceDefinition(final PathManager pathManager) {
         this(FILE_HANDLER_PATH, EJB3Extension.getResourceDescriptionResolver(EJB3SubsystemModel.FILE_HANDLER),
-                new FileHandlerAdd(ATTRIBUTES), FileHandlerRemove.INSTANCE, pathManager);
+                FileHandlerAdd.INSTANCE, FileHandlerRemove.INSTANCE, pathManager);
     }
 
     public FileHandlerResourceDefinition(final PathElement pathElement, final ResourceDescriptionResolver descriptionResolver,
@@ -86,8 +86,15 @@ public class FileHandlerResourceDefinition extends ConsoleHandlerResourceDefinit
     }
 
     private static class FileHandlerAdd extends AbstractAddStepHandler {
-        private FileHandlerAdd(AttributeDefinition[] attributes) {
-            super(attributes);
+        static FileHandlerAdd INSTANCE = new FileHandlerAdd();
+
+        private FileHandlerAdd() {}
+
+        @Override
+        protected void populateModel(ModelNode operation, ModelNode model) throws OperationFailedException {
+            for (AttributeDefinition attr : FileHandlerResourceDefinition.ATTRIBUTES) {
+                attr.validateAndSet(operation, model);
+            }
         }
 
         @Override
