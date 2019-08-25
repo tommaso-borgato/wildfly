@@ -135,6 +135,11 @@ public interface EjbLogger extends BasicLogger {
      */
     EjbLogger EJB3_TIMER_LOGGER = Logger.getMessageLogger(EjbLogger.class, "org.jboss.as.ejb3.timer");
 
+    /**
+     * logger use to log EJB timer messages
+     */
+    EjbLogger EJB3_ACCESS_LOGGER = Logger.getMessageLogger(EjbLogger.class, "org.wildfly.ejb3.access");
+
 //    /**
 //     * Logs an error message indicating an exception occurred while removing an inactive bean.
 //     *
@@ -3199,4 +3204,8 @@ public interface EjbLogger extends BasicLogger {
 
     @Message(id = 514, value = "Cannot load server interceptor module %s")
     RuntimeException cannotLoadServerInterceptorModule(ModuleIdentifier moduleId, @Cause Exception e);
+
+    @LogMessage(level = INFO)
+    @Message(id = 515, value = "%s")
+    void access(String accessLogMessage);
 }
