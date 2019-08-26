@@ -19,21 +19,21 @@ public class SFSB implements SFSBLocal {
     @Override
     @PermitAll
     public String echo(String msg) {
-        logger.info("SFSB");
+        logger.info("[TOMMY] SFSB.echo");
         return String.format("ECHO[%s]", msg);
     }
 
     @Override
     @RolesAllowed("Role1")
     public String echoSecuredRole1(String msg) {
-        logger.info("SFSB Role1");
+        logger.info("[TOMMY] SFSB.echoSecuredRole1 Role1");
         return String.format("ECHO_SECURED_1[%s]", msg);
     }
 
     @Override
     @RolesAllowed("Role2")
     public String echoSecuredRole2(String msg) {
-        logger.info("SFSB Role2");
+        logger.info("[TOMMY] SFSB.echoSecuredRole2 Role2");
         return String.format("ECHO_SECURED_2[%s]", msg);
     }
 }

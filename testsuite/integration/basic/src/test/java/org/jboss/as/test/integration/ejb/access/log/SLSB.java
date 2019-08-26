@@ -19,21 +19,21 @@ public class SLSB implements SLSBLocal {
     @Override
     @PermitAll
     public String echo(String msg) {
-        logger.info("SLSB");
+        logger.info("[TOMMY] SLSB.echo");
         return String.format("ECHO[%s]", msg);
     }
 
     @Override
     @RolesAllowed("Role1")
     public String echoSecuredRole1(String msg) {
-        logger.info("SLSB Role1");
+        logger.info("[TOMMY] SLSB.echoSecuredRole1 Role1");
         return String.format("ECHO_SECURED_1[%s]", msg);
     }
 
     @Override
     @RolesAllowed("Role2")
     public String echoSecuredRole2(String msg) {
-        logger.info("SLSB Role2");
+        logger.info("[TOMMY] SLSB.echoSecuredRole2 Role2");
         return String.format("ECHO_SECURED_2[%s]", msg);
     }
 }
