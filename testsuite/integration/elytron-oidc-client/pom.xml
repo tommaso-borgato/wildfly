@@ -132,6 +132,17 @@
             <artifactId>wildfly-elytron-credential-source-impl</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.wildfly</groupId>
+            <artifactId>wildfly-testsuite-shared</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.microprofile.config</groupId>
+            <artifactId>microprofile-config-api</artifactId>
+            <version>${version.org.eclipse.microprofile.config.api}</version>
+        </dependency>
     </dependencies>
 
     <build>

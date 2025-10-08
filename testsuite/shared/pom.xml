@@ -278,6 +278,13 @@
             <scope>compile</scope>
         </dependency>
 
+        <dependency>
+            <groupId>io.smallrye.config</groupId>
+            <artifactId>smallrye-config</artifactId>
+            <version>${version.io.smallrye.smallrye-config}</version>
+            <scope>compile</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
